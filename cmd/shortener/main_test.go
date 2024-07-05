@@ -6,13 +6,25 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/gorilla/mux"
 )
+
+// setupRouter создает роутер для тестирования
+func setupRouter() *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc("/", mainPage).Methods(http.MethodGet, http.MethodPost)
+	r.HandleFunc("/{id}", redirectHandler).Methods(http.MethodGet)
+	return r
+}
 
 // TestMainPageGet тестирует GET-запрос к главной странице.
 func TestMainPageGet(t *testing.T) {
+	r := setupRouter()
+
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
-	mainPage(w, req)
+	r.ServeHTTP(w, req)
 
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -27,11 +39,13 @@ func TestMainPageGet(t *testing.T) {
 
 // TestMainPagePost тестирует POST-запрос к главной странице.
 func TestMainPagePost(t *testing.T) {
+	r := setupRouter()
+
 	formData := "url=https://example.com"
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(formData))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
-	mainPage(w, req)
+	r.ServeHTTP(w, req)
 
 	resp := w.Result()
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -46,9 +60,11 @@ func TestMainPagePost(t *testing.T) {
 
 // TestMainPageRedirect тестирует перенаправление с сокращенного URL на оригинальный URL.
 func TestMainPageRedirect(t *testing.T) {
+	r := setupRouter()
+
 	req := httptest.NewRequest(http.MethodGet, "/EwHXdJfB", nil)
 	w := httptest.NewRecorder()
-	mainPage(w, req)
+	r.ServeHTTP(w, req)
 
 	resp := w.Result()
 
@@ -62,9 +78,11 @@ func TestMainPageRedirect(t *testing.T) {
 
 // TestMainPageInvalidShortURL тестирует ответ на некорректный сокращенный URL.
 func TestMainPageInvalidShortURL(t *testing.T) {
+	r := setupRouter()
+
 	req := httptest.NewRequest(http.MethodGet, "/invalidURL", nil)
 	w := httptest.NewRecorder()
-	mainPage(w, req)
+	r.ServeHTTP(w, req)
 
 	resp := w.Result()
 
