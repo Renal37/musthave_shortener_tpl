@@ -32,6 +32,7 @@ func ShortenURL(url string) string {
 }
 
 var originalURLs = map[string]string{
+	"EwHXdJfB": "https://example.com/original-url",
 	"1395ec37":"https://vk.com",
 	"3c0a9a5c":"https://practicum.yandex.ru/profile/go-advanced/",
 }
