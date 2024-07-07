@@ -1,26 +1,32 @@
 package config
 
 import (
-	"flag"
+    "os"
 )
 
-// Для запуска  ./shortener -a localhost:8888 -b http://localhost:8888
-
-// Config хранит конфигурацию для сервера.
 type Config struct {
-	Address string
-	BaseURL string
+    Address     string
+    BaseURL     string
 }
+// Для запуска
+// export SERVER_ADDRESS="localhost:8081"
+// export BASE_URL="/myshorten"
+// go run main.go
 
-// InitConfig инициализирует конфигурацию из флагов командной строки.
-func InitConfig() *Config {
-	address := flag.String("a", "localhost:8080", "Адрес запуска HTTP-сервера")
-	baseURL := flag.String("b", "http://localhost:8080", "Базовый адрес результирующего сокращённого URL")
 
-	flag.Parse()
+func InitConfig() Config {
+    cfg := Config{
+        Address:     os.Getenv("SERVER_ADDRESS"),
+        BaseURL:     os.Getenv("BASE_URL"),
+    }
 
-	return &Config{
-		Address: *address,
-		BaseURL: *baseURL,
-	}
+    if cfg.Address == "" {
+        cfg.Address = "localhost:8080"
+    }
+
+    if cfg.BaseURL == "" {
+        cfg.BaseURL = "/shorten"
+    }
+
+    return cfg
 }
