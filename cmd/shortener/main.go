@@ -37,8 +37,8 @@ func ShortenURL(url string) string {
 // Если путь запроса начинается с "/{id}", он вызывает функцию redirectToOriginalURL для перенаправления пользователя на оригинальный URL.
 func getOriginalURL(shortenedURL string) (string, error) {
 	originalURLs := map[string]string{
-		"EwHXdJfB": "https://example.com/original-url",
-		// Add more mappings as needed
+		"1395ec37": "https://vk.com",
+		"3c0a9a5c": "https://practicum.yandex.ru/profile/go-advanced/",
 	}
 
 	originalURL, ok := originalURLs[shortenedURL]
