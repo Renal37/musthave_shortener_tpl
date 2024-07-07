@@ -73,7 +73,7 @@ func main() {
 	r.HandleFunc("/{id}", redirectHandler).Methods(http.MethodGet)
 
 	http.Handle("/", r)
-	err := http.ListenAndServe(":8082", nil)
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic(err)
 	}
