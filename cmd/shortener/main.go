@@ -4,9 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/Renal37/musthave_shortener_tpl.git/config"
 	"io"
 	"net/http"
-	"github.com/gorilla/mux"
 )
 
 // form - HTML-форма для ввода пользователем URL.
@@ -16,8 +17,8 @@ const form = `<html>
     </head>
     <body>
         <form action="/" method="post">
-            <label>URl <input type="text" name="url"></label>
-            <input type="submit" value="Login">
+            <label>URL <input type="text" name="url"></label>
+            <input type="submit" value="Submit">
         </form>
     </body>
 </html>`
@@ -40,15 +41,19 @@ var originalURLs = map[string]string{
 // Если метод запроса POST, он считывает URL из формы,
 // сокращает его с помощью функции ShortenURL и записывает сокращенный URL в ответ.
 // Если метод запроса не POST, он записывает HTML-форму в ответ.
-func mainPage(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		url := r.FormValue("url")
-		shortenedURL := ShortenURL(url)
-		w.WriteHeader(http.StatusCreated)
-		io.WriteString(w, fmt.Sprintf("<p>Shortened URL: %s</p>", shortenedURL))
-		io.WriteString(w, form)
-	} else {
-		io.WriteString(w, form)
+func mainPage(baseURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			url := r.FormValue("url")
+			shortenedURL := ShortenURL(url)
+			originalURLs[shortenedURL] = url // Сохранение оригинального URL в карту
+			w.WriteHeader(http.StatusCreated)
+			io.WriteString(w, fmt.Sprintf(`<p>Original URL: <a href="%s">%s</a></p>`, url, url))
+			io.WriteString(w, fmt.Sprintf(`<p>Shortened URL: <a href="%s/%s">%s/%s</a></p>`, baseURL, shortenedURL, baseURL, shortenedURL))
+			io.WriteString(w, form)
+		} else {
+			io.WriteString(w, form)
+		}
 	}
 }
 
@@ -65,15 +70,16 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// main-функция запускает HTTP-сервер на порту 8080 и ожидает входящих запросов.
-// Она использует пакет gorilla/mux для маршрутизации.
+// main-функция запускает HTTP-сервер с использованием конфигурации из аргументов командной строки.
 func main() {
+	cfg := config.InitConfig()
+
 	r := mux.NewRouter()
-	r.HandleFunc("/", mainPage).Methods(http.MethodGet, http.MethodPost)
+	r.HandleFunc("/", mainPage(cfg.BaseURL)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/{id}", redirectHandler).Methods(http.MethodGet)
 
 	http.Handle("/", r)
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(cfg.Address, nil)
 	if err != nil {
 		panic(err)
 	}

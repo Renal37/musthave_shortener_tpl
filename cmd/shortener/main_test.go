@@ -6,21 +6,22 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
+	"github.com/Renal37/musthave_shortener_tpl.git/config"
 	"github.com/gorilla/mux"
 )
 
 // setupRouter создает роутер для тестирования
-func setupRouter() *mux.Router {
+func setupRouter(cfg *config.Config) *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/", mainPage).Methods(http.MethodGet, http.MethodPost)
+	r.HandleFunc("/", mainPage(cfg.BaseURL)).Methods(http.MethodGet, http.MethodPost)
 	r.HandleFunc("/{id}", redirectHandler).Methods(http.MethodGet)
 	return r
 }
 
 // TestMainPageGet тестирует GET-запрос к главной странице.
 func TestMainPageGet(t *testing.T) {
-	r := setupRouter()
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+	r := setupRouter(cfg)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
@@ -39,7 +40,8 @@ func TestMainPageGet(t *testing.T) {
 
 // TestMainPagePost тестирует POST-запрос к главной странице.
 func TestMainPagePost(t *testing.T) {
-	r := setupRouter()
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+	r := setupRouter(cfg)
 
 	formData := "url=https://example.com"
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(formData))
@@ -56,11 +58,15 @@ func TestMainPagePost(t *testing.T) {
 	if !strings.Contains(string(body), "Shortened URL") {
 		t.Errorf("Ожидалось наличие Shortened URL в теле ответа; получено %v", string(body))
 	}
+	if !strings.Contains(string(body), "Original URL") {
+		t.Errorf("Ожидалось наличие Original URL в теле ответа; получено %v", string(body))
+	}
 }
 
 // TestMainPageRedirect тестирует перенаправление с сокращенного URL на оригинальный URL.
 func TestMainPageRedirect(t *testing.T) {
-	r := setupRouter()
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+	r := setupRouter(cfg)
 
 	req := httptest.NewRequest(http.MethodGet, "/EwHXdJfB", nil)
 	w := httptest.NewRecorder()
@@ -78,7 +84,8 @@ func TestMainPageRedirect(t *testing.T) {
 
 // TestMainPageInvalidShortURL тестирует ответ на некорректный сокращенный URL.
 func TestMainPageInvalidShortURL(t *testing.T) {
-	r := setupRouter()
+	cfg := &config.Config{BaseURL: "http://localhost:8080"}
+	r := setupRouter(cfg)
 
 	req := httptest.NewRequest(http.MethodGet, "/invalidURL", nil)
 	w := httptest.NewRecorder()
