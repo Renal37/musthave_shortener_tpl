@@ -1,13 +1,14 @@
 package main
 
 import (
-    "crypto/sha256"
-    "encoding/hex"
-    "fmt"
-    "github.com/gorilla/mux"
-    "github.com/Renal37/musthave_shortener_tpl.git/config"
-    "io"
-    "net/http"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/Renal37/musthave_shortener_tpl.git/config"
+	"io"
+	"net/http"
+	"os"
 )
 
 // form - HTML-форма для ввода пользователем URL.
@@ -18,69 +19,71 @@ const form = `<html>
     <body>
         <form action="/" method="post">
             <label>URL <input type="text" name="url"></label>
-            <input type="submit" value="Submit">
+            <input type="submit" value="Login">
         </form>
     </body>
 </html>`
 
+var cfg *config.Config
+
 // ShortenURL принимает URL в качестве входных данных и возвращает сокращенную версию.
-// Она использует алгоритм хеширования SHA256 для создания уникального хеша для URL.
-// Возвращаются первые 8 символов хеша как сокращенный URL.
 func ShortenURL(url string) string {
-    hasher := sha256.New()
-    hasher.Write([]byte(url))
-    return hex.EncodeToString(hasher.Sum(nil))[:8]
+	hasher := sha256.New()
+	hasher.Write([]byte(url))
+	return hex.EncodeToString(hasher.Sum(nil))[:8]
 }
 
 var originalURLs = map[string]string{
-	"1395ec37":"https://vk.com",
-	"3c0a9a5c":"https://practicum.yandex.ru/profile/go-advanced/",
+	"EwHXdJfB": "https://example.com/original-url",
+	"1395ec37": "https://vk.com",
+	"3c0a9a5c": "https://practicum.yandex.ru/profile/go-advanced/",
 }
 
 // mainPage обрабатывает HTTP-запросы для главной страницы и нового эндпоинта.
-// Если метод запроса POST, он считывает URL из формы,
-// сокращает его с помощью функции ShortenURL и записывает сокращенный URL в ответ.
-// Если метод запроса не POST, он записывает HTML-форму в ответ.
 func mainPage(baseURL string) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method == http.MethodPost {
-            url := r.FormValue("url")
-            shortenedURL := ShortenURL(url)
-            originalURLs[shortenedURL] = url // Сохранение оригинального URL в карту
-            w.WriteHeader(http.StatusCreated)
-            io.WriteString(w, fmt.Sprintf(`<p>Введеный URL: <a href="%s">%s</a></p>`, url, url))
-            io.WriteString(w, fmt.Sprintf(`<p>Сокращенный URL: <a href="%s/%s">%s/%s</a></p>`, baseURL, shortenedURL, baseURL, shortenedURL))
-            io.WriteString(w, form)
-        } else {
-            io.WriteString(w, form)
-        }
-    }
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			url := r.FormValue("url")
+			shortenedURL := ShortenURL(url)
+			originalURLs[shortenedURL] = url // Сохранение оригинального URL в карте
+			w.WriteHeader(http.StatusCreated)
+			io.WriteString(w, fmt.Sprintf(`<p>Оригинальная URL: <a href="%s">%s</a></p>`, url, url))
+			io.WriteString(w, fmt.Sprintf(`<p>Сокращенная URL: <a href="%s/%s">%s/%s</a></p>`, baseURL, shortenedURL, baseURL, shortenedURL))
+			io.WriteString(w, form)
+		} else {
+			io.WriteString(w, form)
+		}
+	}
 }
 
 // redirectHandler обрабатывает перенаправления с сокращенного URL на оригинальный URL.
 func redirectHandler(w http.ResponseWriter, r *http.Request) {
-    vars := mux.Vars(r)
-    shortenedURL := vars["id"]
-    originalURL, ok := originalURLs[shortenedURL]
-    if !ok {
-        http.Error(w, "Invalid shortened URL", http.StatusBadRequest)
-        return
-    }
-    w.Header().Set("Location", originalURL)
-    w.WriteHeader(http.StatusTemporaryRedirect)
+	vars := mux.Vars(r)
+	shortenedURL := vars["id"]
+	originalURL, ok := originalURLs[shortenedURL]
+	if !ok {
+		http.Error(w, "Вы ввели не правильный URL", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Location", originalURL)
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// main-функция запускает HTTP-сервер с использованием конфигурации из аргументов командной строки.
+// main-функция запускает HTTP-сервер и ожидает входящих запросов.
 func main() {
-    cfg := config.InitConfig()
+	// Инициализация конфигурации
+	cfg = config.InitConfig()
 
-    r := mux.NewRouter()
-    r.HandleFunc("/", mainPage(cfg.BaseURL)).Methods(http.MethodGet, http.MethodPost)
-    r.HandleFunc("/{id}", redirectHandler).Methods(http.MethodGet)
+	r := mux.NewRouter()
+	r.HandleFunc("/", mainPage(cfg.BaseURL)).Methods(http.MethodGet, http.MethodPost)
+	r.HandleFunc("/{id}", redirectHandler).Methods(http.MethodGet)
 
-    http.Handle("/", r)
-    err := http.ListenAndServe(cfg.Address, nil)
-    if err != nil {
-        panic(err)
-    }
+	http.Handle("/", r)
+
+	// Запуск HTTP-сервера
+	err := http.ListenAndServe(cfg.ServerAddress, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Ошибка запуска HTTP-сервера: %v\n", err)
+		os.Exit(1)
+	}
 }
