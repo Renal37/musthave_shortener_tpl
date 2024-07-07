@@ -37,8 +37,8 @@ func ShortenURL(url string) string {
 // Если путь запроса начинается с "/{id}", он вызывает функцию redirectToOriginalURL для перенаправления пользователя на оригинальный URL.
 func getOriginalURL(shortenedURL string) (string, error) {
 	originalURLs := map[string]string{
-		"EwHXdJfB": "https://example.com/original-url",
-		// Add more mappings as needed
+		"1395ec37": "https://vk.com",
+		"3c0a9a5c": "https://practicum.yandex.ru/profile/go-advanced/",
 	}
 
 	originalURL, ok := originalURLs[shortenedURL]
@@ -53,13 +53,13 @@ func mainPage(w http.ResponseWriter, r *http.Request) {
 		url := r.FormValue("url")
 		shortenedURL := ShortenURL(url)
 		w.WriteHeader(http.StatusCreated)
-		io.WriteString(w, fmt.Sprintf("<p>Shortened URL: <a href=\"%s\">%s</a></p>", shortenedURL, shortenedURL))
+		io.WriteString(w, fmt.Sprintf("<p>Сокращенный URL: <a href=\"%s\">%s</a></p>", shortenedURL, shortenedURL))
 		io.WriteString(w, form)
 	} else if len(r.URL.Path) > 1 && r.URL.Path[0] == '/' {
 		shortenedURL := r.URL.Path[1:]
 		originalURL, err := getOriginalURL(shortenedURL)
 		if err != nil {
-			http.Error(w, "Invalid shortened URL", http.StatusBadRequest)
+			http.Error(w, "Не правильный сокращенный URL", http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Location", originalURL)
