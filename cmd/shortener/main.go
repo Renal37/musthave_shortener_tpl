@@ -33,8 +33,8 @@ func ShortenURL(url string) string {
 }
 
 var originalURLs = map[string]string{
-    "EwHXdJfB": "https://example.com/original-url",
-    // Add more mappings as needed
+	"1395ec37":"https://vk.com",
+	"3c0a9a5c":"https://practicum.yandex.ru/profile/go-advanced/",
 }
 
 // mainPage обрабатывает HTTP-запросы для главной страницы и нового эндпоинта.
@@ -48,8 +48,8 @@ func mainPage(baseURL string) http.HandlerFunc {
             shortenedURL := ShortenURL(url)
             originalURLs[shortenedURL] = url // Сохранение оригинального URL в карту
             w.WriteHeader(http.StatusCreated)
-            io.WriteString(w, fmt.Sprintf(`<p>Original URL: <a href="%s">%s</a></p>`, url, url))
-            io.WriteString(w, fmt.Sprintf(`<p>Shortened URL: <a href="%s/%s">%s/%s</a></p>`, baseURL, shortenedURL, baseURL, shortenedURL))
+            io.WriteString(w, fmt.Sprintf(`<p>Введеный URL: <a href="%s">%s</a></p>`, url, url))
+            io.WriteString(w, fmt.Sprintf(`<p>Сокращенный URL: <a href="%s/%s">%s/%s</a></p>`, baseURL, shortenedURL, baseURL, shortenedURL))
             io.WriteString(w, form)
         } else {
             io.WriteString(w, form)
