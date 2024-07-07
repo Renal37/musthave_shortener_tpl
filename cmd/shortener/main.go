@@ -4,10 +4,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/Renal37/musthave_shortener_tpl.git/config"
 	"io"
 	"net/http"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/config"
+	"github.com/gorilla/mux"
 )
 
 // form - HTML-форма для ввода пользователем URL.
@@ -33,8 +34,9 @@ func ShortenURL(url string) string {
 }
 
 var originalURLs = map[string]string{
-	"1395ec37":"https://vk.com",
-	"3c0a9a5c":"https://practicum.yandex.ru/profile/go-advanced/",
+	"EwHXdJfB": "https://example.com/original-url",
+	"1395ec37": "https://vk.com",
+	"3c0a9a5c": "https://practicum.yandex.ru/profile/go-advanced/",
 }
 
 // mainPage обрабатывает HTTP-запросы для главной страницы и нового эндпоинта.
