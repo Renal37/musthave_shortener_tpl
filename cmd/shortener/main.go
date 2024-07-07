@@ -53,13 +53,13 @@ func mainPage(w http.ResponseWriter, r *http.Request) {
 		url := r.FormValue("url")
 		shortenedURL := ShortenURL(url)
 		w.WriteHeader(http.StatusCreated)
-		io.WriteString(w, fmt.Sprintf("<p>Shortened URL: <a href=\"%s\">%s</a></p>", shortenedURL, shortenedURL))
+		io.WriteString(w, fmt.Sprintf("<p>Сокращенный URL: <a href=\"%s\">%s</a></p>", shortenedURL, shortenedURL))
 		io.WriteString(w, form)
 	} else if len(r.URL.Path) > 1 && r.URL.Path[0] == '/' {
 		shortenedURL := r.URL.Path[1:]
 		originalURL, err := getOriginalURL(shortenedURL)
 		if err != nil {
-			http.Error(w, "Invalid shortened URL", http.StatusBadRequest)
+			http.Error(w, "Что пошло не так", http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Location", originalURL)
