@@ -67,7 +67,7 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 				http.Error(w, "Error parsing form", http.StatusBadRequest)
 				return
 			}
-			url := r.FormValue("url")
+			url := r.Form.Get("url")
 			if url == "" {
 				http.Error(w, "URL не может быть пустым", http.StatusBadRequest)
 				return
@@ -96,6 +96,7 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 		}
 	}
 }
+
 
 
 func redirectHandler(storage *URLStorage) http.HandlerFunc {

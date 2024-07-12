@@ -3,17 +3,23 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"github.com/Renal37/musthave_shortener_tpl.git/config"
 )
 
-// TestMainPageHandler тестирует обработку главной страницы
 func TestMainPageHandler(t *testing.T) {
+	// Инициализация конфигурации для тестов
+	cfg := &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "http://localhost:8080",
+	}
 	storage := NewURLStorage()
-	handler := mainPage("http://localhost:8080", storage)
+	handler := mainPage(cfg.BaseURL, storage)
 
 	t.Run("GET запрос", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, "/", nil)
@@ -29,8 +35,9 @@ func TestMainPageHandler(t *testing.T) {
 	})
 
 	t.Run("POST запрос с корректным URL", func(t *testing.T) {
-		form := strings.NewReader("url=https://example.com")
-		req, err := http.NewRequest(http.MethodPost, "/", form)
+		form := url.Values{}
+		form.Set("url", "https://example.com")
+		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -44,8 +51,9 @@ func TestMainPageHandler(t *testing.T) {
 	})
 
 	t.Run("POST запрос с пустым URL", func(t *testing.T) {
-		form := strings.NewReader("url=")
-		req, err := http.NewRequest(http.MethodPost, "/", form)
+		form := url.Values{}
+		form.Set("url", "")
+		req, err := http.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -61,8 +69,6 @@ func TestMainPageHandler(t *testing.T) {
 	})
 }
 
-
-// TestRedirectHandler тестирует обработку перенаправлений
 func TestRedirectHandler(t *testing.T) {
 	storage := NewURLStorage()
 	shortURL, _, _ := ShortenURL("https://example.com", storage)
