@@ -45,15 +45,14 @@ func (s *URLStorage) GetURL(shortenedURL string) (string, bool) {
 	return url, ok
 }
 
-// mainPage обрабатывает HTTP-запросы для главной страницы и нового эндпоинта.
 func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 	const form = `<html>
         <head>
-        <title>Сокращение URL</title>
+        <title></title>
         </head>
         <body>
             <form action="/" method="post">
-                <label>Введите сюда URL, который хотите сократить <input type="text" name="url"></label>
+                <label>Введите сюда URL Который хотите сократить <input type="text" name="url"></label>
                 <input type="submit" value="Сократить">
             </form>
         </body>
@@ -69,12 +68,12 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 
 			shortenedURL, err := ShortenURL(url, storage)
 			if err != nil {
-				http.Error(w, "Ошибка при создании сокращенного URL: "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "Error creating shortened URL: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			if err := storage.SaveURL(shortenedURL, url); err != nil {
-				http.Error(w, "Ошибка при сохранении URL: "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "Error saving URL: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -86,7 +85,6 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 	}
 }
 
-// redirectHandler обрабатывает перенаправления с сокращенного URL на оригинальный URL.
 func redirectHandler(storage *URLStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
@@ -101,7 +99,6 @@ func redirectHandler(storage *URLStorage) http.HandlerFunc {
 	}
 }
 
-// main-функция запускает HTTP-сервер с использованием конфигурации.
 func main() {
 	cfg := config.InitConfig()
 
