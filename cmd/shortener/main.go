@@ -18,10 +18,13 @@ func ShortenURL(url string, storage *URLStorage) (string, int, error) {
 	hasher.Write([]byte(url))
 	hash := hex.EncodeToString(hasher.Sum(nil))[:8]
 
-	if _, exists := storage.originalURLs[hash]; exists {
-		return "", http.StatusConflict, fmt.Errorf("collision detected: %s", hash)
+	// Проверяем, есть ли уже такой хеш в хранилище
+	if originalURL, exists := storage.originalURLs[hash]; exists {
+		// Если хеш уже существует, возвращаем его и статус конфликта
+		return hash, http.StatusConflict, fmt.Errorf("collision detected: %s", originalURL)
 	}
 
+	// Если хеш не найден, сохраняем URL под этим хешем
 	storage.originalURLs[hash] = url
 	return hash, http.StatusCreated, nil
 }
@@ -67,18 +70,18 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 			}
 			url := r.FormValue("url")
 			if url == "" {
-				http.Error(w, "URL не может быть пустым", http.StatusBadRequest)
+				http.Error(w, "URL не может быть пустым\n", http.StatusBadRequest)
 				return
 			}
 
-			shortenedURL, statusCode, err := ShortenURL(url, storage)
+			shortenedURL, status, err := ShortenURL(url, storage)
 			if err != nil {
 				http.Error(w, "Error creating shortened URL: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			if statusCode == http.StatusConflict {
-				http.Error(w, "Collision detected: "+shortenedURL, http.StatusConflict)
+			if status == http.StatusConflict {
+				http.Error(w, fmt.Sprintf("Хеш уже существует для: %s/%s", baseURL, shortenedURL), status)
 				return
 			}
 
@@ -87,7 +90,7 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 				return
 			}
 
-			w.WriteHeader(statusCode)
+			w.WriteHeader(status)
 			io.WriteString(w, fmt.Sprintf("%s/%s", baseURL, shortenedURL))
 		} else {
 			io.WriteString(w, form)

@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 )
@@ -54,7 +55,9 @@ func TestMainPageHandler(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusBadRequest, rr.Code, "Ожидался статус 400 Bad Request")
-		assert.Equal(t, "URL не может быть пустым\n", rr.Body.String(), "Ожидалось сообщение 'URL не может быть пустым'")
+		expectedErrorMsg := "URL не может быть пустым"
+		actualErrorMsg := strings.TrimSpace(rr.Body.String())
+		assert.Equal(t, expectedErrorMsg, actualErrorMsg, "Ожидалось сообщение 'URL не может быть пустым'")
 	})
 }
 
