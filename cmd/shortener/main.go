@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/config"
 	"github.com/gorilla/mux"
 )
@@ -60,6 +61,10 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "Error parsing form", http.StatusBadRequest)
+				return
+			}
 			url := r.FormValue("url")
 			if url == "" {
 				http.Error(w, "URL не может быть пустым", http.StatusBadRequest)
