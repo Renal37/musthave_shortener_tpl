@@ -6,9 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 )
 
+// TestMainPageHandler тестирует обработку главной страницы
 func TestMainPageHandler(t *testing.T) {
 	storage := NewURLStorage()
 	handler := mainPage("http://localhost:8080", storage)
@@ -53,10 +55,13 @@ func TestMainPageHandler(t *testing.T) {
 		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusBadRequest, rr.Code, "Ожидался статус 400 Bad Request")
-		assert.Equal(t, "URL не может быть пустым\n", rr.Body.String(), "Ожидалось сообщение 'URL не может быть пустым'")
+		expectedErrorMsg := "URL не может быть пустым"
+		actualErrorMsg := strings.TrimSpace(rr.Body.String())
+		assert.Equal(t, expectedErrorMsg, actualErrorMsg, "Ожидалось сообщение 'URL не может быть пустым'")
 	})
 }
 
+// TestRedirectHandler тестирует обработку перенаправлений
 func TestRedirectHandler(t *testing.T) {
 	storage := NewURLStorage()
 	shortURL, _, _ := ShortenURL("https://example.com", storage)
@@ -70,7 +75,9 @@ func TestRedirectHandler(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		handler.ServeHTTP(rr, req)
+		router := mux.NewRouter()
+		router.HandleFunc("/{id}", handler).Methods(http.MethodGet)
+		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusTemporaryRedirect, rr.Code, "Ожидался статус 307 Temporary Redirect")
 		assert.Equal(t, "https://example.com", rr.Header().Get("Location"), "Ожидалось перенаправление на https://example.com")
@@ -84,7 +91,9 @@ func TestRedirectHandler(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		handler.ServeHTTP(rr, req)
+		router := mux.NewRouter()
+		router.HandleFunc("/{id}", handler).Methods(http.MethodGet)
+		router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusNotFound, rr.Code, "Ожидался статус 404 Not Found")
 	})
