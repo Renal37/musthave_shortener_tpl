@@ -1,103 +1,98 @@
 package main
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/Renal37/musthave_shortener_tpl.git/config"
 	"github.com/gorilla/mux"
+	"github.com/stretchr/testify/assert"
 )
 
-// setupRouter создает роутер для тестирования
-func setupRouter(cfg *config.Config) *mux.Router {
-	r := mux.NewRouter()
-	r.HandleFunc("/", mainPage(cfg.BaseURL)).Methods(http.MethodGet, http.MethodPost)
-	r.HandleFunc("/{id}", redirectHandler).Methods(http.MethodGet)
-	return r
+// TestMainPageHandler тестирует обработку главной страницы
+func TestMainPageHandler(t *testing.T) {
+	storage := NewURLStorage()
+	handler := mainPage("http://localhost:8080", storage)
+
+	t.Run("GET запрос", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code, "Ожидался статус 200 OK")
+		assert.Contains(t, rr.Body.String(), `<form action="/" method="post">`, "Ожидалось, что HTML-форма будет присутствовать в ответе")
+	})
+
+	t.Run("POST запрос с корректным URL", func(t *testing.T) {
+		form := strings.NewReader("url=https://example.com")
+		req, err := http.NewRequest(http.MethodPost, "/", form)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusCreated, rr.Code, "Ожидался статус 201 Created")
+		assert.Contains(t, rr.Body.String(), "http://localhost:8080/", "Ожидалось, что сокращенный URL будет присутствовать в ответе")
+	})
+
+	t.Run("POST запрос с пустым URL", func(t *testing.T) {
+		form := strings.NewReader("url=")
+		req, err := http.NewRequest(http.MethodPost, "/", form)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code, "Ожидался статус 400 Bad Request")
+		assert.Equal(t, "URL не может быть пустым\n", rr.Body.String(), "Ожидалось сообщение 'URL не может быть пустым'")
+	})
 }
 
-// TestMainPageGet тестирует GET-запрос к главной странице.
-func TestMainPageGet(t *testing.T) {
-	cfg := &config.Config{BaseURL: "http://localhost:8080"}
-	r := setupRouter(cfg)
+// TestRedirectHandler тестирует обработку перенаправлений
+func TestRedirectHandler(t *testing.T) {
+	storage := NewURLStorage()
+	shortURL, _ := ShortenURL("https://example.com", storage)
+	handler := redirectHandler(storage)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+	t.Run("Перенаправление на оригинальный URL", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/"+shortURL, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+		rr := httptest.NewRecorder()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Ожидался статус OK; получен %v", resp.StatusCode)
-	}
-	if !strings.Contains(string(body), "<form") {
-		t.Errorf("Ожидалась форма в теле ответа; получено %v", string(body))
-	}
-}
+		router := mux.NewRouter()
+		router.HandleFunc("/{id}", handler).Methods(http.MethodGet)
+		router.ServeHTTP(rr, req)
 
-// TestMainPagePost тестирует POST-запрос к главной странице.
-func TestMainPagePost(t *testing.T) {
-	cfg := &config.Config{BaseURL: "http://localhost:8080"}
-	r := setupRouter(cfg)
+		assert.Equal(t, http.StatusTemporaryRedirect, rr.Code, "Ожидался статус 307 Temporary Redirect")
+		assert.Equal(t, "https://example.com", rr.Header().Get("Location"), "Ожидалось перенаправление на https://example.com")
+	})
 
-	formData := "url=https://example.com"
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(formData))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+	t.Run("Короткий URL не найден", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/nonexistent", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+		rr := httptest.NewRecorder()
 
-	if resp.StatusCode != http.StatusCreated {
-		t.Errorf("Ожидался статус Created; получен %v", resp.StatusCode)
-	}
-	if !strings.Contains(string(body), "Shortened URL") {
-		t.Errorf("Ожидалось наличие Shortened URL в теле ответа; получено %v", string(body))
-	}
-	if !strings.Contains(string(body), "Original URL") {
-		t.Errorf("Ожидалось наличие Original URL в теле ответа; получено %v", string(body))
-	}
-}
+		router := mux.NewRouter()
+		router.HandleFunc("/{id}", handler).Methods(http.MethodGet)
+		router.ServeHTTP(rr, req)
 
-// TestMainPageRedirect тестирует перенаправление с сокращенного URL на оригинальный URL.
-func TestMainPageRedirect(t *testing.T) {
-	cfg := &config.Config{BaseURL: "http://localhost:8080"}
-	r := setupRouter(cfg)
-
-	req := httptest.NewRequest(http.MethodGet, "/EwHXdJfB", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	resp := w.Result()
-
-	if resp.StatusCode != http.StatusTemporaryRedirect {
-		t.Errorf("Ожидался статус TemporaryRedirect; получен %v", resp.StatusCode)
-	}
-	if location := resp.Header.Get("Location"); location != "https://example.com/original-url" {
-		t.Errorf("Ожидалось перенаправление на https://example.com/original-url; получено %v", location)
-	}
-}
-
-// TestMainPageInvalidShortURL тестирует ответ на некорректный сокращенный URL.
-func TestMainPageInvalidShortURL(t *testing.T) {
-	cfg := &config.Config{BaseURL: "http://localhost:8080"}
-	r := setupRouter(cfg)
-
-	req := httptest.NewRequest(http.MethodGet, "/invalidURL", nil)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	resp := w.Result()
-
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Ожидался статус BadRequest; получен %v", resp.StatusCode)
-	}
-	if body, _ := ioutil.ReadAll(resp.Body); !strings.Contains(string(body), "Invalid shortened URL") {
-		t.Errorf("Ожидалось сообщение об ошибке в теле ответа; получено %v", string(body))
-	}
+		assert.Equal(t, http.StatusNotFound, rr.Code, "Ожидался статус 404 Not Found")
+	})
 }

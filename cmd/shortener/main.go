@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/config"
 	"github.com/gorilla/mux"
 )
@@ -46,17 +45,15 @@ func (s *URLStorage) GetURL(shortenedURL string) (string, bool) {
 	return url, ok
 }
 
-// Осталось переписать main_test.go и переделать другие страницы
-//
 // mainPage обрабатывает HTTP-запросы для главной страницы и нового эндпоинта.
 func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 	const form = `<html>
         <head>
-        <title></title>
+        <title>Сокращение URL</title>
         </head>
         <body>
             <form action="/" method="post">
-                <label>Введите сюда URL Который хотите сократить <input type="text" name="url"></label>
+                <label>Введите сюда URL, который хотите сократить <input type="text" name="url"></label>
                 <input type="submit" value="Сократить">
             </form>
         </body>
@@ -66,18 +63,18 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 		if r.Method == http.MethodPost {
 			url := r.FormValue("url")
 			if url == "" {
-				http.Error(w, "URL cannot be empty", http.StatusBadRequest)
+				http.Error(w, "URL не может быть пустым", http.StatusBadRequest)
 				return
 			}
 
 			shortenedURL, err := ShortenURL(url, storage)
 			if err != nil {
-				http.Error(w, "Error creating shortened URL: "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "Ошибка при создании сокращенного URL: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			if err := storage.SaveURL(shortenedURL, url); err != nil {
-				http.Error(w, "Error saving URL: "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "Ошибка при сохранении URL: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
