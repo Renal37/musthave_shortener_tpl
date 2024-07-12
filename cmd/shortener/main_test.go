@@ -61,6 +61,7 @@ func TestMainPageHandler(t *testing.T) {
 	})
 }
 
+
 // TestRedirectHandler тестирует обработку перенаправлений
 func TestRedirectHandler(t *testing.T) {
 	storage := NewURLStorage()
