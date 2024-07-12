@@ -13,17 +13,17 @@ import (
 )
 
 // ShortenURL принимает URL в качестве входных данных и возвращает сокращенную версию.
-func ShortenURL(url string, storage *URLStorage) (string, error) {
+func ShortenURL(url string, storage *URLStorage) (string, int, error) {
 	hasher := sha256.New()
 	hasher.Write([]byte(url))
 	hash := hex.EncodeToString(hasher.Sum(nil))[:8]
 
 	if _, exists := storage.originalURLs[hash]; exists {
-		return "", fmt.Errorf("collision detected: %s", hash)
+		return "", http.StatusConflict, fmt.Errorf("collision detected: %s", hash)
 	}
 
 	storage.originalURLs[hash] = url
-	return hash, nil
+	return hash, http.StatusCreated, nil
 }
 
 type URLStorage struct {
@@ -71,9 +71,14 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 				return
 			}
 
-			shortenedURL, err := ShortenURL(url, storage)
+			shortenedURL, statusCode, err := ShortenURL(url, storage)
 			if err != nil {
 				http.Error(w, "Error creating shortened URL: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if statusCode == http.StatusConflict {
+				http.Error(w, "Collision detected: "+shortenedURL, http.StatusConflict)
 				return
 			}
 
@@ -82,7 +87,7 @@ func mainPage(baseURL string, storage *URLStorage) http.HandlerFunc {
 				return
 			}
 
-			w.WriteHeader(http.StatusCreated)
+			w.WriteHeader(statusCode)
 			io.WriteString(w, fmt.Sprintf("%s/%s", baseURL, shortenedURL))
 		} else {
 			io.WriteString(w, form)
@@ -99,8 +104,7 @@ func redirectHandler(storage *URLStorage) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Location", originalURL)
-		w.WriteHeader(http.StatusTemporaryRedirect)
+		http.Redirect(w, r, originalURL, http.StatusTemporaryRedirect)
 	}
 }
 

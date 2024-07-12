@@ -9,39 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIteration1(t *testing.T) {
-	// Создаем фейковый сервер
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" && r.Method == http.MethodPost {
-			http.Error(w, "URL не может быть пустым\n", http.StatusBadRequest)
-			return
-		}
-	}))
-	defer server.Close()
-
-	// Пример создания запроса с использованием библиотеки go-resty
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, server.URL+"/", strings.NewReader("some data"))
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
-
-	// Отправляем запрос
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Проверяем статус код
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "ожидается статус код 400")
-
-	// Для проверки сообщения об ошибке можно прочитать тело ответа
-	// и проверить его содержимое.
-	// body, _ := ioutil.ReadAll(resp.Body)
-	// assert.Equal(t, "URL не может быть пустым\n", string(body), "ожидается определенное сообщение об ошибке")
-}
-
 // TestMainPageHandler тестирует обработку главной страницы
 func TestMainPageHandler(t *testing.T) {
 	storage := NewURLStorage()
@@ -94,7 +61,7 @@ func TestMainPageHandler(t *testing.T) {
 // TestRedirectHandler тестирует обработку перенаправлений
 func TestRedirectHandler(t *testing.T) {
 	storage := NewURLStorage()
-	shortURL, _ := ShortenURL("https://example.com", storage)
+	shortURL, _, _ := ShortenURL("https://example.com", storage)
 	handler := redirectHandler(storage)
 
 	t.Run("Перенаправление на оригинальный URL", func(t *testing.T) {
