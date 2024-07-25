@@ -13,7 +13,7 @@ func Start(config *config.Config) {
     storageInstance := storage.NewStorage()
 
     // Запускаем сервер приложения
-    err := api.StartRestAPI(config.ServerAddr, config.BaseURL, storageInstance)
+    err := api.StartRestAPI(config.ServerAddr, config.BaseURL, config.LogLevel, storageInstance)
     if err != nil {
         // Если возникла ошибка, выводим сообщение об ошибке и возвращаем
         fmt.Println("Ошибка при запуске сервера: ", err)
