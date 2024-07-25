@@ -1,11 +1,20 @@
 package api
 
 import (
+	"encoding/json"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"strings"
-	"github.com/gin-gonic/gin"
 )
+
+type StructEntrance struct {
+	PerformanceURL string `json:"url"`
+}
+
+type StructRes struct {
+	PerformanceResult string `json:"result"`
+}
 
 // Функция обработки запросов на сокращение URL
 func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
@@ -25,6 +34,46 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	// Установка типа содержимого ответа и отправка сокращенного URL в ответе
 	c.Header("Content-Type", "text/plain")
 	c.String(http.StatusCreated, shortURL)
+}
+
+// Функция обработки запросов на сокращение URL в формате JSON
+func (s *RestAPI) ShortenURLHandlerJSON(c *gin.Context) {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		// Если произошла ошибка при чтении тела запроса, отправляем статус ошибки сервера и сообщение об ошибке
+		c.String(http.StatusInternalServerError, "Ошибка при чтении тела запроса", http.StatusInternalServerError)
+		return
+	}
+
+	// Декодируем тело запроса в структуру StructEntrance
+	var decoderBody StructEntrance
+	err = json.Unmarshal(body, &decoderBody)
+	if err != nil {
+		// Если произошла ошибка при декодировании JSON, отправляем статус ошибки сервера и сообщение об ошибке
+		c.String(http.StatusInternalServerError, "Ошибка при чтении тела запроса", http.StatusInternalServerError)
+		return
+	}
+
+	// Удаляем лишние пробелы в URL
+	URLtoBody := strings.TrimSpace(decoderBody.PerformanceURL)
+
+	// Получаем сокращенный URL с помощью сервиса структуры данных
+	shortURL := s.StructService.GetShortURL(URLtoBody)
+
+	// Создаем структуру StructRes с результатом сокращения URL
+	StructPerformance := StructRes{PerformanceResult: shortURL}
+
+	// Преобразуем структуру в JSON
+	respJSON, err := json.Marshal(StructPerformance)
+	if err != nil {
+		// Если произошла ошибка при преобразовании JSON, отправляем статус ошибки сервера и сообщение об ошибке
+		c.String(http.StatusInternalServerError, "Ошибка при чтении тела запроса", http.StatusInternalServerError)
+		return
+	}
+
+	// Устанавливаем тип содержимого ответа и отправляем сокращенный URL в ответе с статусом создания и типом содержимого "application/json"
+	c.Header("Content-Type", "application/json")
+	c.Data(http.StatusCreated, "application/json", respJSON)
 }
 
 // Функция обработки запросов на переадресацию на оригинальный URL
