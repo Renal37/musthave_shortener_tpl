@@ -2,7 +2,9 @@ package api
 
 import (
 	"fmt"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -36,7 +38,9 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, storage *storage.
 	// Создаем новый экземпляр Gin-инженерии
 	r := gin.Default()
 
-	r.Use(logger.RequestLogger(logger.Log), gin.Recovery())
+	r.Use(middleware.RequestLogger(logger.Log), gin.Recovery())
+
+	r.Use(middleware.CompressRequest(), gin.Recovery())
 
 	// Вызываем метод setRoutes на объекте RestAPI для добавления маршрутов в API
 	api.setRoutes(r)

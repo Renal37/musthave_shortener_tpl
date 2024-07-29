@@ -146,7 +146,7 @@ func Test_shortenURLHandlerJSON(t *testing.T) {
 				contentType: "application/json",
 			},
 			body: reqBody{
-				"https://practicum.yandex.ru",
+				"https://practicum.yandex.ru",  
 			},
 		},
 	}
