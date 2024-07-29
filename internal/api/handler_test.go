@@ -2,14 +2,15 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 // Test_shortenURLHandler - тест для функции ShortenURLHandler
@@ -157,12 +158,12 @@ func Test_shortenURLHandlerJSON(t *testing.T) {
 
 			r := gin.Default()
 
-			r.POST("/api/storage", tt.Storage.ShortenURLHandlerJSON)
+			r.POST("/api/shorten", tt.Storage.ShortenURLHandlerJSON)
 			jsonBody, err := json.Marshal(tt.body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			request := httptest.NewRequest(http.MethodPost, "/api/storage", strings.NewReader(string(jsonBody)))
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(string(jsonBody)))
 			request.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 

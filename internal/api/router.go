@@ -7,6 +7,6 @@ import (
 // Функция setRoutes - устанавливает маршруты для сервера
 func (s *RestAPI) setRoutes(r *gin.Engine) {
 	r.POST("/", s.ShortenURLHandler)
-	r.POST("/api/storage", s.ShortenURLHandlerJSON)
+	r.POST("/api/shorten", s.ShortenURLHandlerJSON)
 	r.GET("/:id", s.RedirectToOriginalURLHandler)
 }
