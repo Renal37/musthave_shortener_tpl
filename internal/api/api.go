@@ -1,7 +1,13 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
@@ -38,21 +44,33 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, storage *storage.
 	// Создаем новый экземпляр Gin-инженерии
 	r := gin.Default()
 
-	r.Use(middleware.RequestLogger(logger.Log), gin.Recovery())
+	r.Use(
+		gin.Recovery(),
+		middleware.LoggerMiddleware(logger.Log),
+		middleware.CompressMiddleware(),
+	)
 
-	r.Use(middleware.CompressRequest(), gin.Recovery())
-
-	// Вызываем метод setRoutes на объекте RestAPI для добавления маршрутов в API
 	api.setRoutes(r)
 
-	// Запускаем сервер на указанном ServerAddr
-	err := r.Run(ServerAddr)
-	// Если возникнет ошибка при запуске сервера, выводим сообщение об ошибке и возвращаем эту ошибку
-	if err != nil {
-		fmt.Println("Ошибка при запуске сервера: ", err)
-		return err
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: r,
 	}
 
-	// Если сервер запустился без ошибок, возвращаем nil
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	go func() {
+		err := r.Run(ServerAddr)
+		if err != nil {
+			fmt.Println("failed to start the browser")
+		}
+	}()
+	<-quit
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Ошибка при остановке сервера: %v\n", err)
+	}
+
 	return nil
 }
