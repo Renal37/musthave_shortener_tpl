@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"log"
+	"strings"
 )
 
 // gzipWriter оборачивает gin.ResponseWriter и добавляет Writer для сжатия
@@ -20,27 +21,21 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 }
 
 // CompressRequest возвращает middleware для обработки сжатия запросов и ответов
-func CompressRequest() gin.HandlerFunc {
+func CompressMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Проверяем, что Content-Type запроса либо JSON, либо HTML
 		if c.Request.Header.Get("Content-Type") == "application/json" ||
 			c.Request.Header.Get("Content-Type") == "text/html" {
-
-			acceptEncodings := c.Request.Header.Values("Accept-Encoding")
-
 			// Если клиент поддерживает gzip сжатие, сжимаем ответ
-			if containsGzip(acceptEncodings) {
+			if strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
 				compressWriter := gzip.NewWriter(c.Writer)
 				defer compressWriter.Close()
 				c.Header("Content-Encoding", "gzip")
 				c.Writer = &gzipWriter{c.Writer, compressWriter}
 			}
 		}
-
-		contentEncodings := c.Request.Header.Values("Content-Encoding")
-
 		// Если запрос сжат с использованием gzip, разжимаем тело запроса
-		if containsGzip(contentEncodings) {
+		if strings.Contains(c.Request.Header.Get("Content-Encoding"), "gzip") {
 			compressReader, err := gzip.NewReader(c.Request.Body)
 			if err != nil {
 				log.Printf("ошибка: создание нового gzip reader: %v", err)

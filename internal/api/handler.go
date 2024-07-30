@@ -30,6 +30,7 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 
 	// Получение сокращенного URL с помощью сервиса структуры данных
 	shortURL := s.StructService.GetShortURL(URLtoBody)
+	
 
 	// Установка типа содержимого ответа и отправка сокращенного URL в ответе
 	c.Header("Content-Type", "text/plain")
