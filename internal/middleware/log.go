@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// RequestLogger возвращает middleware для логирования запросов и ответов с использованием zap.Logger
-func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
+// LoggerMiddleware возвращает middleware для логирования запросов и ответов с использованием zap.Logger
+func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Запоминаем время начала запроса
 		start := time.Now()
@@ -31,7 +31,8 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		logger.Info("Request",
 			zap.String("method", c.Request.Method),
 			zap.String("path", c.Request.URL.Path), // Исправлено название поля на "path"
-			zap.Duration("duration", duration),    // Исправлено название поля на "duration"
+			zap.Duration("duration", duration),     // Исправлено название поля на "duration"
+			zap.String("Response", ""),
 		)
 
 		// Логируем информацию об ответе

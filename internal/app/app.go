@@ -1,22 +1,51 @@
 package app
 
 import (
-    "fmt"
-    "github.com/Renal37/musthave_shortener_tpl.git/internal/api"
-    "github.com/Renal37/musthave_shortener_tpl.git/internal/config"
-    "github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"fmt"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
-// Функция Start - запускает сервер приложения
-func Start(config *config.Config) {
-    // Создаем экземпляр хранилища
-    storageInstance := storage.NewStorage()
+type App struct {
+	storageInstance *storage.Storage
+	config          *config.Config
+}
 
-    // Запускаем сервер приложения
-    err := api.StartRestAPI(config.ServerAddr, config.BaseURL, config.LogLevel, storageInstance)
-    if err != nil {
-        // Если возникла ошибка, выводим сообщение об ошибке и возвращаем
-        fmt.Println("Ошибка при запуске сервера: ", err)
-        return
-    }
+// NewApp создает новый экземпляр приложения с заданным хранилищем и конфигурацией
+func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
+	return &App{
+		storageInstance: storageInstance,
+		config:          config,
+	}
+}
+
+// Start запускает приложение: загружает данные из файла в хранилище и запускает REST API
+func (a *App) Start() {
+	// Заполняем хранилище данными из файла
+	err := dump.FillFromStorage(a.storageInstance, a.config.FilePath)
+	if err != nil {
+		// Выводим ошибку, если не удалось заполнить хранилище
+		fmt.Printf("Ошибка при заполнении хранилища: %v\n", err)
+		return
+	}
+
+	// Запускаем REST API
+	err = api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, a.storageInstance)
+	if err != nil {
+		// Выводим ошибку, если не удалось запустить API
+		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
+	}
+}
+
+// Stop останавливает приложение: сохраняет данные из хранилища в файл
+func (a *App) Stop() {
+	// Сохраняем данные из хранилища в файл
+	err := dump.Set(a.storageInstance, a.config.FilePath, a.config.BaseURL)
+	if err != nil {
+		// Выводим ошибку, если не удалось сохранить данные
+		fmt.Printf("Ошибка при сохранении данных: %v\n", err)
+	}
 }
