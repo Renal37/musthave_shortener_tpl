@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
@@ -33,7 +32,7 @@ func (a *App) Start() {
 	}
 
 	// Запускаем REST API
-	err = api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, a.storageInstance)
+	err = api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, a.config.DBPath, a.storageInstance)
 	if err != nil {
 		// Выводим ошибку, если не удалось запустить API
 		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
