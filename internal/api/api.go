@@ -13,6 +13,7 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/Renal37/musthave_shortener_tpl.git/store"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -27,13 +28,19 @@ type RestAPI struct {
 // ServerAddr - адрес, на котором будет запущен сервер
 // BaseURL - основной URL для работы с коротким URL-адресатором
 // storage - объект хранилища для короткого URL-адресатора
-func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, storage *storage.Storage) error {
+func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, DBPath string, storage *storage.Storage) error {
+
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
 	}
 	logger.Log.Info("Запуск сервера", zap.String("address", ServerAddr))
+	bd, err := store.InitDatabase(DBPath)
+	if err != nil {
+		return err
+	}
 	// Создаем новый объект ShortenerService с указанным BaseURL и хранилищем
-	storageShortener := services.NewShortenerService(BaseURL, storage)
+	storageShortener := services.NewShortenerService(BaseURL, storage, bd)
+
 	// Создаем новый объект RestAPI с указанным ShortenerService
 	api := &RestAPI{
 		StructService: storageShortener,
