@@ -30,6 +30,7 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 
 	// Получение сокращенного URL с помощью сервиса структуры данных
 	shortURL := s.StructService.GetShortURL(URLtoBody)
+	
 
 	// Установка типа содержимого ответа и отправка сокращенного URL в ответе
 	c.Header("Content-Type", "text/plain")
@@ -90,4 +91,13 @@ func (s *RestAPI) RedirectToOriginalURLHandler(c *gin.Context) {
 	// Установка заголовка "Location" для переадресации на оригинальный URL и отправка статуса временной переадресации и оригинального URL в ответе
 	c.Header("Location", originalURL)
 	c.String(http.StatusTemporaryRedirect, originalURL)
+}
+func (s *RestAPI) Ping(ctx *gin.Context) {
+	err := s.StructService.Ping()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, "")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, "")
 }
