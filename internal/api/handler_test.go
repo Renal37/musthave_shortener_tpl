@@ -16,7 +16,7 @@ import (
 // Test_shortenURLHandler - тест для функции ShortenURLHandler
 func Test_shortenURLHandler(t *testing.T) {
 	storageInstance := storage.NewStorage()
-	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil)
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 	// Описание теста
 	type args struct {
 		code        int
@@ -64,7 +64,7 @@ func Test_shortenURLHandler(t *testing.T) {
 func Test_redirectToOriginalURLHandler(t *testing.T) {
 	// Описание теста
 	storageInstance := storage.NewStorage()
-	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil)
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
 	type argsGet struct {
 		code     int
@@ -108,7 +108,7 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 }
 func Test_shortenURLHandlerJSON(t *testing.T) {
 	storageInstance := storage.NewStorage()
-	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil)
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
 	type args struct {
 		code        int

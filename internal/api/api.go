@@ -28,27 +28,18 @@ type RestAPI struct {
 // ServerAddr - адрес, на котором будет запущен сервер
 // BaseURL - основной URL для работы с коротким URL-адресатором
 // storage - объект хранилища для короткого URL-адресатора
-func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, DBPath string, storage *storage.Storage) error {
-
+func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
 	}
-	logger.Log.Info("Запуск сервера", zap.String("address", ServerAddr))
-	bd, err := store.InitDatabase(DBPath)
-	if err != nil {
-		return err
-	}
-	// Создаем новый объект ShortenerService с указанным BaseURL и хранилищем
-	storageShortener := services.NewShortenerService(BaseURL, storage, bd)
+	logger.Log.Info("Running server", zap.String("address", ServerAddr))
+	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 
-	// Создаем новый объект RestAPI с указанным ShortenerService
 	api := &RestAPI{
 		StructService: storageShortener,
 	}
 
-	// Устанавливаем режим работы Gin-фреймворка на ReleaseMode
 	gin.SetMode(gin.ReleaseMode)
-	// Создаем новый экземпляр Gin-инженерии
 	r := gin.Default()
 
 	r.Use(
