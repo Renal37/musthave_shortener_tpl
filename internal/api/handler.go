@@ -1,93 +1,117 @@
 package api
 
+// Импортируем необходимые пакеты
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
-type StructEntrance struct {
-	PerformanceURL string `json:"url"`
+// Определяем структуру Request, которая будет хранить URL для сокращения
+type Request struct {
+	URL string `json:"url"`
 }
 
-type StructRes struct {
-	PerformanceResult string `json:"result"`
+// Определяем структуру Response, которая будет хранить результат сокращения URL
+type Response struct {
+	Result string `json:"result"`
 }
 
-// Функция обработки запросов на сокращение URL
+// Функция ShortenURLHandler обрабатывает запросы на сокращение URL
 func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
-	// Чтение тела запроса
+	// Читаем тело запроса
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		// Если произошла ошибка при чтении тела запроса, отправляем статус ошибки сервера и сообщение об ошибке
-		c.String(http.StatusInternalServerError, "Ошибка при чтении тела запроса", http.StatusInternalServerError)
+		// Если не удалось прочитать тело запроса, отправляем ошибку с кодом 500
+		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса")
 		return
 	}
-	// Удаление лишних пробелов в начале и конце строки
-	URLtoBody := strings.TrimSpace(string(body))
-
-	// Получение сокращенного URL с помощью сервиса структуры данных
-	shortURL := s.StructService.GetShortURL(URLtoBody)
-
-	// Установка типа содержимого ответа и отправка сокращенного URL в ответе
+	// Удаляем лишние пробелы в начале и конце строки
+	url := strings.TrimSpace(string(body))
+	// Создаем сокращенный URL с помощью ShortenerService
+	shortURL := s.StructService.Set(url)
+	// Устанавливаем заголовок "Content-Type" для текстового ответа
 	c.Header("Content-Type", "text/plain")
+	// Отправляем сокращенный URL в ответе
 	c.String(http.StatusCreated, shortURL)
 }
 
-// Функция обработки запросов на сокращение URL в формате JSON
-func (s *RestAPI) ShortenURLHandlerJSON(c *gin.Context) {
-	body, err := io.ReadAll(c.Request.Body)
+// Функция ShortenURLJSON обрабатывает запросы на сокращение URL в формате JSON
+func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
+	// Создаем декодер для JSON-тела запроса
+	var decoderBody Request
+	decoder := json.NewDecoder(c.Request.Body)
+	// Декодируем JSON-тело запроса
+	err := decoder.Decode(&decoderBody)
 	if err != nil {
-		// Если произошла ошибка при чтении тела запроса, отправляем статус ошибки сервера и сообщение об ошибке
-		c.String(http.StatusInternalServerError, "Ошибка при чтении тела запроса", http.StatusInternalServerError)
+		// Если не удалось декодировать JSON-тело запроса, отправляем ошибку с кодом 500
+		errorMessage := map[string]interface{}{
+			"message": "Не удалось прочитать тело запроса",
+			"code":    http.StatusInternalServerError,
+		}
+		answer, _ := json.Marshal(errorMessage)
+		// Устанавливаем заголовок "Content-Type" для JSON-ответа
+		c.Header("Content-Type", "application/json")
+		// Отправляем ошибку в формате JSON
+		c.Data(http.StatusInternalServerError, "application/json", answer)
 		return
 	}
-
-	// Декодируем тело запроса в структуру StructEntrance
-	var decoderBody StructEntrance
-	err = json.Unmarshal(body, &decoderBody)
-	if err != nil {
-		// Если произошла ошибка при декодировании JSON, отправляем статус ошибки сервера и сообщение об ошибке
-		c.String(http.StatusInternalServerError, "Ошибка при чтении тела запроса", http.StatusInternalServerError)
-		return
-	}
-
-	// Удаляем лишние пробелы в URL
-	URLtoBody := strings.TrimSpace(decoderBody.PerformanceURL)
-
-	// Получаем сокращенный URL с помощью сервиса структуры данных
-	shortURL := s.StructService.GetShortURL(URLtoBody)
-
-	// Создаем структуру StructRes с результатом сокращения URL
-	StructPerformance := StructRes{PerformanceResult: shortURL}
-
-	// Преобразуем структуру в JSON
+	// Удаляем лишние пробелы в начале и конце строки
+	url := strings.TrimSpace(decoderBody.URL)
+	// Создаем сокращенный URL с помощью ShortenerService
+	shortURL := s.StructService.Set(url)
+	// Создаем структуру ответа с результатом сокращения URL
+	StructPerformance := Response{Result: shortURL}
+	// Конвертируем структуру ответа в JSON
 	respJSON, err := json.Marshal(StructPerformance)
 	if err != nil {
-		// Если произошла ошибка при преобразовании JSON, отправляем статус ошибки сервера и сообщение об ошибке
-		c.String(http.StatusInternalServerError, "Ошибка при чтении тела запроса", http.StatusInternalServerError)
+		// Если не удалось создать JSON-ответ, отправляем ошибку с кодом 500
+		errorMessage := map[string]interface{}{
+			"message": "Не удалось создать ответ",
+			"code":    http.StatusInternalServerError,
+		}
+		answer, _ := json.Marshal(errorMessage)
+		// Устанавливаем заголовок "Content-Type" для JSON-ответа
+		c.Header("Content-Type", "application/json")
+		// Отправляем ошибку в формате JSON
+		c.Data(http.StatusInternalServerError, "application/json", answer)
 		return
 	}
-
-	// Устанавливаем тип содержимого ответа и отправляем сокращенный URL в ответе с статусом создания и типом содержимого "application/json"
+	// Устанавливаем заголовок "Content-Type" для JSON-ответа
 	c.Header("Content-Type", "application/json")
+	// Отправляем сокращенный URL в формате JSON
 	c.Data(http.StatusCreated, "application/json", respJSON)
 }
 
-// Функция обработки запросов на переадресацию на оригинальный URL
-func (s *RestAPI) RedirectToOriginalURLHandler(c *gin.Context) {
-	// Получение идентификатора сокращенного URL из параметра запроса
+// Функция RedirectToOriginalURL обрабатывает запросы на переадку на оригинальный URL
+func (s *RestAPI) RedirectToOriginalURL(c *gin.Context) {
+	// Читаем параметр "id" из URL-адреса запроса
 	shortID := c.Param("id")
-	// Получение оригинального URL с помощью сервиса структуры данных
-	originalURL, exists := s.StructService.GetOriginalURL(shortID)
+	// Получаем оригинальный URL из ShortenerService
+	originalURL, exists := s.StructService.Get(shortID)
 	if !exists {
-		// Если оригинального URL не найдено, отправляем статус временной переадресации и сообщение об ошибке
+		// Если оригинальный URL не найден, отправляем ошибку с кодом 404
 		c.String(http.StatusTemporaryRedirect, "URL не найден")
 		return
 	}
-	// Установка заголовка "Location" для переадресации на оригинальный URL и отправка статуса временной переадресации и оригинального URL в ответе
+	// Устанавливаем заголовок "Location" для переадки на оригинальный URL
 	c.Header("Location", originalURL)
+	// Отправляем оригинальный URL в ответе
 	c.String(http.StatusTemporaryRedirect, originalURL)
+}
+
+// Функция Ping обрабатывает запросы на проверку работоспособности сервиса
+func (s *RestAPI) Ping(ctx *gin.Context) {
+	// Вызываем метод Ping в ShortenerService
+	err := s.StructService.Ping()
+	if err != nil {
+		// Если не удалось выполнить проверку работоспособности сервиса, отправляем ошибку с кодом 500
+		ctx.JSON(http.StatusInternalServerError, "")
+		return
+	}
+	// Если проверка выполнена успешно, отправляем пустой JSON-ответ
+	ctx.JSON(http.StatusOK, "")
 }
