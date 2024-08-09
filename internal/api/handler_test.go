@@ -2,22 +2,20 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 )
 
-// Test_shortenURLHandler - тест для функции ShortenURLHandler
 func Test_shortenURLHandler(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
-	// Описание теста
+
 	type args struct {
 		code        int
 		contentType string
@@ -57,56 +55,9 @@ func Test_shortenURLHandler(t *testing.T) {
 			assert.Equal(t, tt.args.contentType, res.Header.Get("Content-Type"))
 		})
 	}
-
 }
 
-// Test_redirectToOriginalURLHandler - тест для функции RedirectToOriginalURLHandler
-func Test_redirectToOriginalURLHandler(t *testing.T) {
-	// Описание теста
-	storageInstance := storage.NewStorage()
-	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
-
-	type argsGet struct {
-		code     int
-		testURL  string
-		location string
-	}
-	testsGET := []struct {
-		name    string
-		Storage RestAPI
-		argsGet argsGet
-	}{
-		{
-			name: "test1",
-			Storage: RestAPI{
-				StructService: storageShortener,
-			},
-			argsGet: argsGet{
-				code:     307,
-				testURL:  "ads",
-				location: "https://practicum.yandex.ru/",
-			},
-		},
-	}
-
-	for _, tt := range testsGET {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.Storage.StructService.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
-
-			r := gin.Default()
-			r.GET("/:id", tt.Storage.RedirectToOriginalURLHandler)
-
-			request := httptest.NewRequest(http.MethodGet, "/ads", nil)
-			w := httptest.NewRecorder()
-			r.ServeHTTP(w, request)
-			res := w.Result()
-			defer res.Body.Close()
-			assert.Equal(t, tt.argsGet.code, res.StatusCode)
-			assert.Equal(t, tt.argsGet.location, res.Header.Get("location"))
-		})
-	}
-}
-func Test_shortenURLHandlerJSON(t *testing.T) {
+func Test_shortenURLHandlerURL(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
@@ -142,7 +93,7 @@ func Test_shortenURLHandlerJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
 
-			r.POST("/api/shorten", tt.Storage.ShortenURLHandlerJSON)
+			r.POST("/api/shorten", tt.Storage.ShortenURLJSON)
 			jsonBody, err := json.Marshal(tt.body)
 			if err != nil {
 				t.Fatal(err)
@@ -158,6 +109,51 @@ func Test_shortenURLHandlerJSON(t *testing.T) {
 
 			assert.Equal(t, tt.args.code, res.StatusCode)
 			assert.Equal(t, tt.args.contentType, res.Header.Get("Content-Type"))
+		})
+	}
+}
+
+func Test_redirectToOriginalURLHandler(t *testing.T) {
+	storageInstance := storage.NewStorage()
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
+
+	type argsGet struct {
+		code     int
+		testURL  string
+		location string
+	}
+	testsGET := []struct {
+		name    string
+		Storage RestAPI
+		argsGet argsGet
+	}{
+		{
+			name: "test1",
+			Storage: RestAPI{
+				StructService: storageShortener,
+			},
+			argsGet: argsGet{
+				code:     307,
+				testURL:  "ads",
+				location: "https://practicum.yandex.ru/",
+			},
+		},
+	}
+
+	for _, tt := range testsGET {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.Storage.StructService.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
+
+			r := gin.Default()
+			r.GET("/:id", tt.Storage.RedirectToOriginalURL)
+
+			request := httptest.NewRequest(http.MethodGet, "/ads", nil)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, request)
+			res := w.Result()
+			defer res.Body.Close()
+			assert.Equal(t, tt.argsGet.code, res.StatusCode)
+			assert.Equal(t, tt.argsGet.location, res.Header.Get("location"))
 		})
 	}
 }

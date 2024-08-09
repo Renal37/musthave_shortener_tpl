@@ -18,16 +18,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// RestAPI структура содержит указатель на объект ShortenerService
 type RestAPI struct {
 	StructService *services.ShortenerService
 }
 
-// StartRestAPI функция инициализирует сервер REST API
-// Она принимает три параметра: ServerAddr, BaseURL, и storage
-// ServerAddr - адрес, на котором будет запущен сервер
-// BaseURL - основной URL для работы с коротким URL-адресатором
-// storage - объект хранилища для короткого URL-адресатора
 func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
