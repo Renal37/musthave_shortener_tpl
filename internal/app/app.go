@@ -2,7 +2,7 @@ package app
 
 import (
 	"fmt"
-	"log"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
@@ -38,7 +38,8 @@ func (a *App) Start() {
 		// Заполняем хранилище данными из файла
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Printf("Ошибка при заполнении хранилища: %v\n", err)
+			return
 		}
 		dbDNSTurn = false
 	}
