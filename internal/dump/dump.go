@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
@@ -47,24 +46,27 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 }
 
 func Set(storageInstance *storage.Storage, filePath string, BaseURL string) error {
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	newDecoder := json.NewDecoder(file)
 	maxUUID := 0
-	for shortURL, originalURL := range storageInstance.URLs {
-		// shortURL := fmt.Sprintf("%s/%s", BaseURL, key)
-		maxUUID += 1
-		ShortCollector := ShortCollector{
-			strconv.Itoa(maxUUID),
-			shortURL,
-			originalURL,
+	for {
+		var event ShortCollector
+		if err := newDecoder.Decode(&event); err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				fmt.Println("error decode JSON:", err)
+				break
+			}
 		}
-		writer := bufio.NewWriter(file)
-		err = writeEvent(&ShortCollector, writer)
+		maxUUID += 1
+		storageInstance.Set(event.OriginalURL, event.ShortURL)
 	}
-	return err
+	return nil
 }
 
 func writeEvent(ShortCollector *ShortCollector, writer *bufio.Writer) error {

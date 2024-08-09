@@ -65,7 +65,6 @@ func (s *ShortenerService) Get(shortID string) (string, bool) {
 		}
 		return originalURL, true
 	}
-
 	return s.Storage.Get(shortID)
 }
 func (s *ShortenerService) Ping() error {

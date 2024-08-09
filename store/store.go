@@ -40,7 +40,6 @@ func (s *StoreDB) Create(originalURL, shortURL string) error {
 	if err != nil {
 		return fmt.Errorf("error save URL: %w", err)
 	}
-	//fmt.Println("URL save")
 	return nil
 }
 
@@ -51,7 +50,6 @@ func createTable(db *sql.DB) error {
 		original_url TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
-
 	_, err := db.Exec(query)
 	if err != nil {
 		return err
@@ -66,7 +64,6 @@ func (s *StoreDB) Get(shortURL string) (string, error) {
         FROM urls 
         WHERE short_id = $1
     `
-
 	var originalURL string
 	err := s.db.QueryRow(query, shortURL).Scan(&originalURL)
 	if err != nil {
@@ -75,7 +72,6 @@ func (s *StoreDB) Get(shortURL string) (string, error) {
 		}
 		return "", err
 	}
-
 	return originalURL, err
 }
 
