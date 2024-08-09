@@ -82,7 +82,7 @@ func (s *RestAPI) RedirectToOriginalURLHandler(c *gin.Context) {
 	// Получение идентификатора сокращенного URL из параметра запроса
 	shortID := c.Param("id")
 	// Получение оригинального URL с помощью сервиса структуры данных
-	originalURL, exists := s.StructService.GetOriginalURL(shortID)
+	originalURL, exists := s.StructService.Get(shortID)
 	if !exists {
 		// Если оригинального URL не найдено, отправляем статус временной переадресации и сообщение об ошибке
 		c.String(http.StatusTemporaryRedirect, "URL не найден")
