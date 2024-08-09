@@ -2,7 +2,7 @@ package services
 
 import (
 	"fmt"
-	"math/rand"
+	"github.com/google/uuid"
 )
 
 type Store interface {
@@ -10,10 +10,12 @@ type Store interface {
 	Create(originalURL, shortURL string) error
 	Get(shortIrl string) (string, error)
 }
+
 type Repository interface {
 	Set(shortID string, originalURL string)
 	Get(shortID string) (string, bool)
 }
+
 type ShortenerService struct {
 	BaseURL   string
 	Storage   Repository
@@ -31,9 +33,8 @@ func NewShortenerService(BaseURL string, storage Repository, db Store, dbDNSTurn
 	return s
 }
 
-// Функция GetShortURL - генерирует и возвращает короткую ссылку для переданной оригинальной ссылки
-func (s *ShortenerService) GetShortURL(originalURL string) string {
-	shortID := randSeq(8)
+func (s *ShortenerService) Set(originalURL string) string {
+	shortID := randSeq()
 	if s.dbDNSTurn {
 		err := s.CreateRep(originalURL, shortID)
 		if err != nil {
@@ -46,17 +47,11 @@ func (s *ShortenerService) GetShortURL(originalURL string) string {
 	return shortURL
 }
 
-// Функция randSeq - генерирует случайную последовательность из заданного количества символов
-func randSeq(n int) string {
-	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
+func randSeq() string {
+	newUUID := uuid.New()
+	return newUUID.String()
 }
 
-// Функция Get - возвращает оригинальную ссылку по короткой ссылке
 func (s *ShortenerService) Get(shortID string) (string, bool) {
 	if s.dbDNSTurn {
 		originalURL, err := s.GetRep(shortID)
@@ -65,8 +60,10 @@ func (s *ShortenerService) Get(shortID string) (string, bool) {
 		}
 		return originalURL, true
 	}
+
 	return s.Storage.Get(shortID)
 }
+
 func (s *ShortenerService) Ping() error {
 	return s.db.PingStore()
 }
