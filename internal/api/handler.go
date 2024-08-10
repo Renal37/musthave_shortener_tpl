@@ -20,6 +20,16 @@ type Response struct {
 	Result string `json:"result"`
 }
 
+type RequestBodyURLs struct {
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
+type ResponseBodyURLs struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
+}
+
 // Функция ShortenURLHandler обрабатывает запросы на сокращение URL
 func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	// Читаем тело запроса
@@ -101,6 +111,44 @@ func (s *RestAPI) RedirectToOriginalURL(c *gin.Context) {
 	c.Header("Location", originalURL)
 	// Отправляем оригинальный URL в ответе
 	c.String(http.StatusTemporaryRedirect, originalURL)
+}
+
+func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
+	var decoderBody []RequestBodyURLs
+	decoder := json.NewDecoder(c.Request.Body)
+	err := decoder.Decode(&decoderBody)
+	c.Header("Content-Type", "application/json")
+	if err != nil {
+		errorMassage := map[string]interface{}{
+			"message": "Failed to read request body",
+			"code":    http.StatusInternalServerError,
+		}
+		answer, _ := json.Marshal(errorMassage)
+		c.Data(http.StatusInternalServerError, "application/json", answer)
+		return
+	}
+	var URLResponses []ResponseBodyURLs
+	for _, req := range decoderBody {
+		url := strings.TrimSpace(req.OriginalURL)
+		shortURL := s.StructService.Set(url)
+		urlResponse := ResponseBodyURLs{
+			req.CorrelationID,
+			shortURL,
+		}
+		URLResponses = append(URLResponses, urlResponse)
+	}
+	respJSON, err := json.Marshal(URLResponses)
+	if err != nil {
+		errorMassage := map[string]interface{}{
+			"message": "Failed to read request body",
+			"code":    http.StatusInternalServerError,
+		}
+		answer, _ := json.Marshal(errorMassage)
+		c.Data(http.StatusInternalServerError, "application/json", answer)
+		return
+	}
+	c.Data(http.StatusCreated, "application/json", respJSON)
+
 }
 
 // Функция Ping обрабатывает запросы на проверку работоспособности сервиса
