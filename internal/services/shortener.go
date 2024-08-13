@@ -1,14 +1,18 @@
 package services
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/google/uuid"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 )
 
 type Store interface {
 	PingStore() error
 	Create(originalURL, shortURL string) error
-	Get(shortIrl string) (string, error)
+	Get(shortIrl string, originalURL string) (string, error)
 }
 
 type Repository interface {
@@ -32,19 +36,28 @@ func NewShortenerService(BaseURL string, storage Repository, db Store, dbDNSTurn
 	}
 	return s
 }
+func (s *ShortenerService) GetExistURL(originalURL string, err error) (string, error) {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+		shortID, err := s.GetRep("", originalURL)
+		shortURL := fmt.Sprintf("%s/%s", s.BaseURL, shortID)
+		return shortURL, err
+	}
+	return "", err
+}
 
-func (s *ShortenerService) Set(originalURL string) string {
+func (s *ShortenerService) Set(originalURL string) (string, error) {
 	shortID := randSeq()
 	if s.dbDNSTurn {
 		err := s.CreateRep(originalURL, shortID)
 		if err != nil {
-			return ""
+			return "", err
 		}
 	} else {
 		s.Storage.Set(shortID, originalURL)
 	}
 	shortURL := fmt.Sprintf("%s/%s", s.BaseURL, shortID)
-	return shortURL
+	return shortURL, nil
 }
 
 func randSeq() string {
@@ -54,7 +67,7 @@ func randSeq() string {
 
 func (s *ShortenerService) Get(shortID string) (string, bool) {
 	if s.dbDNSTurn {
-		originalURL, err := s.GetRep(shortID)
+		originalURL, err := s.GetRep(shortID, "")
 		if err != nil {
 			return "", false
 		}
@@ -72,6 +85,6 @@ func (s *ShortenerService) CreateRep(originalURL, shortURL string) error {
 	return s.db.Create(originalURL, shortURL)
 }
 
-func (s *ShortenerService) GetRep(shortURL string) (string, error) {
-	return s.db.Get(shortURL)
+func (s *ShortenerService) GetRep(shortURL, originalURL string) (string, error) {
+	return s.db.Get(shortURL, originalURL)
 }
