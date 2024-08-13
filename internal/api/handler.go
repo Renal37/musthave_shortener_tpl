@@ -2,35 +2,41 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
+// Определение структуры Request для URL-адреса
 type Request struct {
 	URL string `json:"url"`
 }
 
+// Определение структуры Response для результата
 type Response struct {
 	Result string `json:"result"`
 }
 
+// Определение структуры RequestBodyURLs для корреляционного идентификатора и исходного URL-адреса
 type RequestBodyURLs struct {
 	CorrelationID string `json:"correlation_id"`
 	OriginalURL   string `json:"original_url"`
 }
 
+// Определение структуры ResponseBodyURLs для корреляционного идентификатора и сокращенного URL-адреса
 type ResponseBodyURLs struct {
 	CorrelationID string `json:"correlation_id"`
 	ShortURL      string `json:"short_url"`
 }
 
+// Функция ShortenURLHandler обрабатывает запрос на сокращение URL-адреса
 func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	httpStatus := http.StatusCreated
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to read request body", http.StatusInternalServerError)
+		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса", http.StatusInternalServerError)
 		return
 	}
 	url := strings.TrimSpace(string(body))
@@ -38,7 +44,7 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	if err != nil {
 		shortURL, err = s.StructService.GetExistURL(url, err)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "the url could not be shortened", http.StatusInternalServerError)
+			c.String(http.StatusInternalServerError, "Не удалось сократить URL", http.StatusInternalServerError)
 			return
 		}
 		httpStatus = http.StatusConflict
@@ -47,6 +53,7 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	c.String(httpStatus, shortURL)
 }
 
+// Функция ShortenURLJSON обрабатывает запрос на сокращение URL-адреса в формате JSON
 func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	var decoderBody Request
 	httpStatus := http.StatusCreated
@@ -55,7 +62,7 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	c.Header("Content-Type", "application/json")
 	if err != nil {
 		errorMassage := map[string]interface{}{
-			"message": "Failed to read request body",
+			"message": "Не удалось прочитать тело запроса",
 			"code":    http.StatusInternalServerError,
 		}
 		answer, _ := json.Marshal(errorMassage)
@@ -68,7 +75,7 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 		shortURL, err = s.StructService.GetExistURL(url, err)
 		if err != nil {
 			errorMassage := map[string]interface{}{
-				"message": "the url could not be shortened",
+				"message": "Не удалось сократить URL",
 				"code":    http.StatusInternalServerError,
 			}
 			answer, _ := json.Marshal(errorMassage)
@@ -82,7 +89,7 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	respJSON, err := json.Marshal(StructPerformance)
 	if err != nil {
 		errorMassage := map[string]interface{}{
-			"message": "Failed to read request body",
+			"message": "Не удалось прочитать тело запроса",
 			"code":    http.StatusInternalServerError,
 		}
 		answer, _ := json.Marshal(errorMassage)
@@ -92,17 +99,19 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	c.Data(httpStatus, "application/json", respJSON)
 }
 
+// Функция RedirectToOriginalURL обрабатывает запрос на перенаправление по сокращенному URL-адресу
 func (s *RestAPI) RedirectToOriginalURL(c *gin.Context) {
 	shortID := c.Param("id")
 	originalURL, exists := s.StructService.Get(shortID)
 	if !exists {
-		c.String(http.StatusTemporaryRedirect, "URL not found")
+		c.String(http.StatusTemporaryRedirect, "URL не найден", http.StatusTemporaryRedirect)
 		return
 	}
 	c.Header("Location", originalURL)
 	c.String(http.StatusTemporaryRedirect, originalURL)
 }
 
+// Функция ShortenURLsJSON обрабатывает запрос на сокращение нескольких URL-адресов в формате JSON
 func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 	var decoderBody []RequestBodyURLs
 	httpStatus := http.StatusCreated
@@ -111,7 +120,7 @@ func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 	c.Header("Content-Type", "application/json")
 	if err != nil {
 		errorMassage := map[string]interface{}{
-			"message": "Failed to read request body",
+			"message": "Не удалось прочитать тело запроса",
 			"code":    http.StatusInternalServerError,
 		}
 		answer, _ := json.Marshal(errorMassage)
@@ -126,7 +135,7 @@ func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 			shortURL, err = s.StructService.GetExistURL(url, err)
 			if err != nil {
 				errorMassage := map[string]interface{}{
-					"message": "the url could not be shortened",
+					"message": "Не удалось сократить URL",
 					"code":    http.StatusInternalServerError,
 				}
 				answer, _ := json.Marshal(errorMassage)
@@ -144,7 +153,7 @@ func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 	respJSON, err := json.Marshal(URLResponses)
 	if err != nil {
 		errorMassage := map[string]interface{}{
-			"message": "Failed to read request body",
+			"message": "Не удалось прочитать тело запроса",
 			"code":    http.StatusInternalServerError,
 		}
 		answer, _ := json.Marshal(errorMassage)
@@ -152,9 +161,9 @@ func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 		return
 	}
 	c.Data(httpStatus, "application/json", respJSON)
-
 }
 
+// Функция Ping обрабатывает запрос на проверку работоспособности сервиса
 func (s *RestAPI) Ping(ctx *gin.Context) {
 	err := s.StructService.Ping()
 	if err != nil {
