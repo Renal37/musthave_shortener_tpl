@@ -65,21 +65,33 @@ func createTable(db *sql.DB) error {
 }
 
 // Функция (s *StoreDB).Get получает URL-адрес по его короткому
-func (s *StoreDB) Get(shortURL string) (string, error) {
-	query := `
-        SELECT original_url 
+
+func (s *StoreDB) Get(shortURL string, originalURL string) (string, error) {
+	field1 := "original_url"
+	field2 := "short_id"
+	field := shortURL
+	if shortURL == "" {
+		field2 = "original_url"
+		field1 = "short_id"
+		field = originalURL
+	}
+
+	query := fmt.Sprintf(`
+        SELECT %s 
         FROM urls 
-        WHERE short_id = $1
-    `
-	var originalURL string
-	err := s.db.QueryRow(query, shortURL).Scan(&originalURL)
+        WHERE %s = $1
+    `, field1, field2)
+
+	var answer string
+	err := s.db.QueryRow(query, field).Scan(&answer)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", err
 		}
 		return "", err
 	}
-	return originalURL, err
+
+	return answer, err
 }
 
 // Функция (s *StoreDB).PingStore проверяет подключение к базе данных
