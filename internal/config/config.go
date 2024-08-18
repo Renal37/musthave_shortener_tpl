@@ -1,44 +1,41 @@
 package config
 
-// Импортируем необходимые пакеты
 import (
 	"flag"
+	"fmt"
+
 	"github.com/caarlos0/env/v6"
 )
 
-// Определяем структуру Config, которая будет хранить параметры конфигурации
 type Config struct {
 	ServerAddr string `env:"SERVER_ADDRESS"`
 	BaseURL    string `env:"BASE_URL"`
 	LogLevel   string `env:"FLAG_LOG_LEVEL"`
 	FilePath   string `env:"FILE_STORAGE_PATH"`
-	DBPath     string `env:"db"`
 }
 
-// Функция InitConfig инициализирует структуру Config с помощью флагов и переменных окружения
+// Функция инициализации конфигурации
 func InitConfig() *Config {
 	config := &Config{
 		ServerAddr: "localhost:8080",
 		BaseURL:    "http://localhost:8080",
 		LogLevel:   "info",
 		FilePath:   "short-url-db.json",
-		DBPath:     "",
 	}
-
-	// Устанавливаем флаги для параметров конфигурации
-	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "address and port to run api")
-	flag.StringVar(&config.BaseURL, "b", config.BaseURL, "address and port to run api addrResPos")
+	// Установка флагов для адреса и порта сервера так же ошибка
+	flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "адрес и номер порта для запуска API")
+	flag.StringVar(&config.BaseURL, "b", config.BaseURL, "адрес и номер порта для запуска API адресПозиции")
 	flag.StringVar(&config.LogLevel, "c", config.LogLevel, "log level")
 	flag.StringVar(&config.FilePath, "f", config.FilePath, "address to file in-memory")
-	flag.StringVar(&config.DBPath, "d", config.DBPath, "address to base store in-memory")
 
-	// Парсим флаги и переменные окружения
+	// Проверка и парсинг переменных среды
 	flag.Parse()
 	err := env.Parse(config)
 	if err != nil {
-		panic(err)
+		// Если произошла ошибка при парсинге переменных среды, выводим сообщение об ошибке и возвращаем nil
+		fmt.Printf("Ошибка при парсинге переменных среды: %v\n", err)
+		return nil
 	}
-
-	// Возвращаем инициализированную структуру Config
+	// Возвращение инициализированной конфигурации
 	return config
 }
