@@ -47,6 +47,7 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB
 	r.Use(middleware.LoggerMiddleware(logger.Log))
 	// Используем CompressMiddleware
 	r.Use(middleware.CompressMiddleware())
+	r.Use(middleware.AuthorizationMiddleware())
 	// Устанавливаем маршруты для API с помощью функции api.setRoutes
 	api.setRoutes(r)
 	// Создаем новый HTTP сервер с адресом ":8080" и указанным router в качестве Handler

@@ -39,6 +39,9 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса", http.StatusInternalServerError)
 		return
 	}
+	userIDFromContext, _ := c.Get("userID")
+	userID, _ := userIDFromContext.(string)
+	s.StructService.UserID = userID
 	url := strings.TrimSpace(string(body))
 	shortURL, err := s.StructService.Set(url)
 	if err != nil {
@@ -69,6 +72,9 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 		c.Data(http.StatusInternalServerError, "application/json", answer)
 		return
 	}
+	userIDFromContext, _ := c.Get("userID")
+	userID, _ := userIDFromContext.(string)
+	s.StructService.UserID = userID
 	url := strings.TrimSpace(decoderBody.URL)
 	shortURL, err := s.StructService.Set(url)
 	if err != nil {
