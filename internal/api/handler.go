@@ -178,3 +178,39 @@ func (s *RestAPI) Ping(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, "")
 }
+
+func (s *RestAPI) UserURLsHandler(ctx *gin.Context) {
+	code := http.StatusOK
+	userIDFromContext, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Failed to get userID",
+			"error":   errors.New("failed to get user from context").Error(),
+		})
+		return
+	}
+	UserNew, _ := ctx.Get("new")
+	if UserNew == true {
+		code = http.StatusUnauthorized
+		ctx.JSON(code, nil)
+		return
+	}
+	userID, _ := userIDFromContext.(string)
+	s.StructService.UserID = userID
+	urls, err := s.StructService.GetFullRep()
+	ctx.Header("Content-type", "application/json")
+	if err != nil {
+		code = http.StatusInternalServerError
+		ctx.JSON(code, gin.H{
+			"message": "Failed to retrieve user URLs",
+			"code":    code,
+		})
+		return
+	}
+
+	if len(urls) == 0 {
+		ctx.JSON(http.StatusNoContent, nil)
+		return
+	}
+	ctx.JSON(code, urls)
+}
