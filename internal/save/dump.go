@@ -4,12 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"io"
 	"os"
 	"strconv"
-
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
 type Memory struct {
