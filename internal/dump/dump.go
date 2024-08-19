@@ -45,7 +45,7 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 	return nil
 }
 
-func Set(storageInstance *storage.Storage, filePath string, BaseURL string) error {
+func Set(storageInstance *storage.Storage, filePath string) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
@@ -53,7 +53,6 @@ func Set(storageInstance *storage.Storage, filePath string, BaseURL string) erro
 	defer file.Close()
 	maxUUID := 0
 	for shortURL, originalURL := range storageInstance.URLs {
-		//shortURL := fmt.Sprintf("%s/%s", BaseURL, key)
 		maxUUID += 1
 		ShortCollector := ShortCollector{
 			strconv.Itoa(maxUUID),
