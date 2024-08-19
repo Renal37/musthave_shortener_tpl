@@ -59,7 +59,7 @@ func (a *App) UseDatabase() bool {
 func (a *App) Stop() {
 	// Сохраняем данные из хранилища в файл
 	if a.UseDatabase() {
-		err := dump.Set(a.storageInstance, a.config.FilePath, a.config.BaseURL)
+		err := dump.Set(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			// Выводим ошибку, если не удалось сохранить данные
 			fmt.Printf("Ошибка при сохранении данных: %v\n", err)

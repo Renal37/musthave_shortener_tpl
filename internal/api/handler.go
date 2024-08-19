@@ -185,7 +185,6 @@ func (s *RestAPI) UserURLsHandler(ctx *gin.Context) {
 	if !exists {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Failed to get userID",
-			"error":   errors.New("failed to get user from context").Error(),
 		})
 		return
 	}
