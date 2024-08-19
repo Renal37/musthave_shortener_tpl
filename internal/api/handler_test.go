@@ -2,14 +2,15 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_shortenURLHandler(t *testing.T) {
@@ -57,7 +58,7 @@ func Test_shortenURLHandler(t *testing.T) {
 	}
 }
 
-func Test_shortenURLHandlerURLJSON(t *testing.T) {
+func Test_shortenURLHandlerJSON(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
@@ -112,6 +113,7 @@ func Test_shortenURLHandlerURLJSON(t *testing.T) {
 		})
 	}
 }
+
 func Test_shortenURLsHandlerJSON(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
@@ -202,6 +204,7 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range testsGET {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.Storage.StructService.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
