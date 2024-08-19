@@ -202,7 +202,6 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range testsGET {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.Storage.StructService.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)

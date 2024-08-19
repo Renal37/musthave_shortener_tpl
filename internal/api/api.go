@@ -43,10 +43,12 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB
 	r := gin.Default()
 	// Используем Gin recovery middleware
 	r.Use(gin.Recovery())
-	// Используем LoggerMiddleware с указанным логгером
-	r.Use(middleware.LoggerMiddleware(logger.Log))
-	// Используем CompressMiddleware
-	r.Use(middleware.CompressMiddleware())
+	r.Use(
+		gin.Recovery(),
+		middleware.LoggerMiddleware(logger.Log),
+		middleware.CompressMiddleware(),
+		middleware.AuthorizationMiddleware(),
+	)
 	// Устанавливаем маршруты для API с помощью функции api.setRoutes
 	api.setRoutes(r)
 	// Создаем новый HTTP сервер с адресом ":8080" и указанным router в качестве Handler
