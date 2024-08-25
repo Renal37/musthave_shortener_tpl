@@ -52,7 +52,7 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB
 	
 	// Создаем новый HTTP сервер с указанным ServerAddr и router в качестве Handler
 	server := &http.Server{
-		Addr:    ServerAddr,  // Используем настройку ServerAddr
+		Addr: ":8080",
 		Handler: r,
 	}
 	
