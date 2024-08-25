@@ -24,7 +24,7 @@ func InitDatabase(DatabasePath string) (*StoreDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при открытии базы данных: %w", err)
 	}
-	
+
 	// Создаем экземпляр StoreDB и инициализируем его
 	storeDB := &StoreDB{db: db}
 
