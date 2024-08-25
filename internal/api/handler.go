@@ -132,4 +132,3 @@ func (s *RestAPI) Ping(ctx *gin.Context) {
 	}
 	ctx.Status(http.StatusOK)
 }
-	
