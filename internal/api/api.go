@@ -49,20 +49,22 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB
 	r.Use(middleware.CompressMiddleware())
 	// Устанавливаем маршруты для API с помощью функции api.setRoutes
 	api.setRoutes(r)
-	// Создаем новый HTTP сервер с адресом ":8080" и указанным router в качестве Handler
+	
+	// Создаем новый HTTP сервер с указанным ServerAddr и router в качестве Handler
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    ServerAddr,  // Используем настройку ServerAddr
 		Handler: r,
 	}
+	
 	// Создаем канал для получения OS сигналов
 	quit := make(chan os.Signal, 1)
 	// Регистрируем os.Interrupt сигнал в канал quit
 	signal.Notify(quit, os.Interrupt)
 	// Запускаем горутину для запуска сервера на указанном адресе
 	go func() {
-		err := r.Run(ServerAddr)
-		if err != nil {
-			fmt.Println("Не удалось запустить браузер")
+		err := server.ListenAndServe()  // Используем сервер для запуска
+		if err != nil && err != http.ErrServerClosed {
+			fmt.Println("Не удалось запустить сервер:", err)
 		}
 	}()
 	// Ждем получения сигнала в канал quit
@@ -71,7 +73,7 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	// Отменяем контекст при завершении функции
 	defer cancel()
-	// Грациозно остановляем сервер с помощью контекста
+	// Грациозно останавливаем сервер с помощью контекста
 	if err := server.Shutdown(ctx); err != nil {
 		fmt.Printf("Ошибка при остановке сервера: %v\n", err)
 	}
