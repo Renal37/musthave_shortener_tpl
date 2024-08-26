@@ -26,7 +26,7 @@ func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 // Start запускает приложение: загружает данные из файла в хранилище и запускает REST API
 func (a *App) Start() {
 	// Инициализируем базу данных
-	db, err := store.InitDatabase(a.config.DATABASE_DSN)
+	db, err := store.InitDatabase(a.config.DBPath)
 	if err != nil {
 		// Выводим ошибку, если не удалось инициализировать базу данных
 		fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
@@ -34,7 +34,7 @@ func (a *App) Start() {
 	}
 
 	dbDNSTurn := true
-	if a.config.DATABASE_DSN == "" {
+	if a.config.DBPath == "" {
 		// Заполняем хранилище данными из файла
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
@@ -55,7 +55,7 @@ func (a *App) Start() {
 // Stop останавливает приложение: сохраняет данные из хранилища в файл
 func (a *App) Stop() {
 	// Сохраняем данные из хранилища в файл
-	if a.config.DATABASE_DSN == "" {
+	if a.config.DBPath == "" {
 		err := dump.Set(a.storageInstance, a.config.FilePath, a.config.BaseURL)
 		if err != nil {
 			// Выводим ошибку, если не удалось сохранить данные

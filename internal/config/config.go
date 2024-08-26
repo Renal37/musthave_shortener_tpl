@@ -12,7 +12,7 @@ type Config struct {
 	BaseURL    string `env:"BASE_URL"`
 	LogLevel   string `env:"FLAG_LOG_LEVEL"`
 	FilePath   string `env:"FILE_STORAGE_PATH"`
-	DATABASE_DSN     string `env:"db"`
+	DBPath     string `env:"db"`
 }
 
 // Функция InitConfig инициализирует структуру Config с помощью флагов и переменных окружения
@@ -22,7 +22,7 @@ func InitConfig() *Config {
 		BaseURL:    "http://localhost:8080",
 		LogLevel:   "info",
 		FilePath:   "short-url-db.json",
-		DATABASE_DSN:     "",
+		DBPath:     "",
 	}
 
 	// Устанавливаем флаги для параметров конфигурации
@@ -30,7 +30,7 @@ func InitConfig() *Config {
 	flag.StringVar(&config.BaseURL, "b", config.BaseURL, "address and port to run api addrResPos")
 	flag.StringVar(&config.LogLevel, "c", config.LogLevel, "log level")
 	flag.StringVar(&config.FilePath, "f", config.FilePath, "address to file in-memory")
-	flag.StringVar(&config.DATABASE_DSN, "d", config.DATABASE_DSN, "address to base store in-memory")
+	flag.StringVar(&config.DBPath, "d", config.DBPath, "address to base store in-memory")
 
 	// Парсим флаги и переменные окружения
 	flag.Parse()
