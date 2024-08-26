@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
@@ -22,47 +23,43 @@ func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 	}
 }
 
-// Start запускает приложение: загружает данные из файла в хранилище или инициализирует базу данных
+// Start запускает приложение: загружает данные из файла в хранилище и запускает REST API
 func (a *App) Start() {
-	var err error
-	var db *store.StoreDB
+	// Инициализируем базу данных
+	db, err := store.InitDatabase(a.config.DATABASE_DSN)
+	if err != nil {
+		// Выводим ошибку, если не удалось инициализировать базу данных
+		fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
+		return
+	}
 
-	// Проверка наличия DATABASE_DSN
-	if a.config.DATABASE_DSN != "" {
-		// Инициализируем базу данных
-		db, err = store.InitDatabase(a.config.DATABASE_DSN)
-		if err != nil {
-			// Выводим ошибку, если не удалось инициализировать базу данных
-			fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
-			return
-		}
-	} else if a.config.FilePath != "" {
-		// Если DATABASE_DSN не указан, используем файл
+	dbDNSTurn := true
+	if a.config.DATABASE_DSN == "" {
+		// Заполняем хранилище данными из файла
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
-			fmt.Printf("Ошибка при заполнении хранилища из файла: %v\n", err)
+			fmt.Printf("Ошибка при заполнении хранилища: %v\n", err)
 			return
 		}
-	} else {
-		// Если ни DATABASE_DSN, ни FilePath не указаны, используем память
-		fmt.Println("Используется хранение данных в памяти.")
+		dbDNSTurn = false
 	}
 
 	// Запускаем REST API
-	err = api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, db != nil, a.storageInstance)
+	err = api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
 	if err != nil {
 		// Выводим ошибку, если не удалось запустить API
 		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
 	}
 }
 
-// Stop останавливает приложение: сохраняет данные из хранилища в файл, если используется файл
+// Stop останавливает приложение: сохраняет данные из хранилища в файл
 func (a *App) Stop() {
-	if a.config.DATABASE_DSN == "" && a.config.FilePath != "" {
+	// Сохраняем данные из хранилища в файл
+	if a.config.DATABASE_DSN == "" {
 		err := dump.Set(a.storageInstance, a.config.FilePath, a.config.BaseURL)
 		if err != nil {
 			// Выводим ошибку, если не удалось сохранить данные
-			fmt.Printf("Ошибка при сохранении данных в файл: %v\n", err)
+			fmt.Printf("Ошибка при сохранении данных: %v\n", err)
 		}
 	}
 }
