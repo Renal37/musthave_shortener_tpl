@@ -2,15 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_shortenURLHandler(t *testing.T) {
