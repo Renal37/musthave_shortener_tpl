@@ -15,16 +15,16 @@ type StoreDB struct {
 func InitDatabase(DatabasePath string) (*StoreDB, error) {
 	db, err := sql.Open("pgx", DatabasePath)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при открытии базы данных: %w", err)
+		return nil, fmt.Errorf("error opening db: %w", err)
 	}
 
 	storeDB := new(StoreDB)
 	storeDB.db = db
 
 	if DatabasePath != "" {
-		err = createTable(db) // Создание таблицы, если путь к базе данных не пустой
+		err = createTable(db)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка при создании таблицы в базе данных: %w", err)
+			return nil, fmt.Errorf("error creae table db: %w", err)
 		}
 	}
 
@@ -32,9 +32,6 @@ func InitDatabase(DatabasePath string) (*StoreDB, error) {
 }
 
 func (s *StoreDB) Create(originalURL, shortURL string) error {
-	if originalURL == "" || shortURL == "" {
-		return fmt.Errorf("оригинальный URL и короткий URL не могут быть пустыми")
-	}
 	query := `
         INSERT INTO urls (short_id, original_url) 
         VALUES ($1, $2)
@@ -69,9 +66,6 @@ func createTable(db *sql.DB) error {
 }
 
 func (s *StoreDB) Get(shortURL string, originalURL string) (string, error) {
-	if shortURL == "" && originalURL == "" {
-		return "", fmt.Errorf("короткий URL или оригинальный URL должны быть указаны")
-	}	
 	field1 := "original_url"
 	field2 := "short_id"
 	field := shortURL
@@ -87,23 +81,23 @@ func (s *StoreDB) Get(shortURL string, originalURL string) (string, error) {
         WHERE %s = $1
     `, field1, field2)
 
-	var result string
-	err := s.db.QueryRow(query, field).Scan(&result) // Выполнение запроса и сканирование результата
+	var answer string
+	err := s.db.QueryRow(query, field).Scan(&answer)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("запись не найдена: %w", err)
+			return "", err
 		}
-		return "", fmt.Errorf("ошибка при выполнении запроса: %w", err)
+		return "", err
 	}
 
-	return result, nil
+	return answer, err
 }
 
 func (s *StoreDB) PingStore() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	if err := s.db.PingContext(ctx); err != nil {
-		return fmt.Errorf("ошибка при создании записи: %w", err)
+		return fmt.Errorf("pinging db-store: %w", err)
 	}
 	return nil
 }

@@ -35,7 +35,7 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 			if err == io.EOF {
 				break
 			} else {
-				fmt.Println("Ошибка при декодировании JSON:", err)
+				fmt.Println("error decode JSON:", err)
 				break
 			}
 		}
@@ -84,4 +84,4 @@ func writeEvent(ShortCollector *ShortCollector, writer *bufio.Writer) error {
 
 	// записываем буфер в файл
 	return writer.Flush()
-}
+}	
