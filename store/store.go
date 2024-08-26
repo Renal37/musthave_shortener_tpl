@@ -32,6 +32,9 @@ func InitDatabase(DatabasePath string) (*StoreDB, error) {
 }
 
 func (s *StoreDB) Create(originalURL, shortURL string) error {
+	if originalURL == "" || shortURL == "" {
+		return fmt.Errorf("оригинальный URL и короткий URL не могут быть пустыми")
+	}
 	query := `
         INSERT INTO urls (short_id, original_url) 
         VALUES ($1, $2)
