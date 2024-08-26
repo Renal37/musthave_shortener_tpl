@@ -33,7 +33,7 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	httpStatus := http.StatusCreated
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса")
+		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса", http.StatusInternalServerError)
 		return
 	}
 	url := strings.TrimSpace(string(body))
@@ -43,7 +43,7 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	if err != nil {
 		shortURL, err = s.StructService.GetExistURL(url, err)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Не удалось сократить URL")
+			c.String(http.StatusInternalServerError, "Не удалось сократить URL", http.StatusInternalServerError)
 			return
 		}
 		httpStatus = http.StatusConflict

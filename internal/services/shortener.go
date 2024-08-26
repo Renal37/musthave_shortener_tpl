@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
@@ -36,6 +35,7 @@ func NewShortenerService(BaseURL string, storage Repository, db Store, dbDNSTurn
 	}
 	return s
 }
+
 func (s *ShortenerService) GetExistURL(originalURL string, err error) (string, error) {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
