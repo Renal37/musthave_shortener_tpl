@@ -35,7 +35,7 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 			if err == io.EOF {
 				break
 			} else {
-				fmt.Println("error decode JSON:", err)
+				fmt.Println("Ошибка при декодировании JSON:", err)
 				break
 			}
 		}

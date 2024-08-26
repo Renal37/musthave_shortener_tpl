@@ -69,6 +69,9 @@ func createTable(db *sql.DB) error {
 }
 
 func (s *StoreDB) Get(shortURL string, originalURL string) (string, error) {
+	if shortURL == "" && originalURL == "" {
+		return "", fmt.Errorf("короткий URL или оригинальный URL должны быть указаны")
+	}	
 	field1 := "original_url"
 	field2 := "short_id"
 	field := shortURL
