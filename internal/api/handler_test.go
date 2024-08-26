@@ -158,7 +158,7 @@ func Test_shortenURLsHandlerJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
 
-			r.POST("/api/shorten/batch", tt.Storage.ShortenURLsJSON)
+			r.POST("/api/shorten", tt.Storage.ShortenURLsJSON)
 			jsonBody, err := json.Marshal(tt.body)
 			if err != nil {
 				t.Fatal(err)
