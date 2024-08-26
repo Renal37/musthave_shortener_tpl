@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Определение структур для запросов и ответов
 type Request struct {
 	URL string `json:"url"`
 }
@@ -27,6 +28,7 @@ type ResponseBodyURLs struct {
 	ShortURL      string `json:"short_url"`
 }
 
+// ShortenURLHandler обрабатывает запрос на сокращение URL-адреса
 func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	httpStatus := http.StatusCreated
 	body, err := io.ReadAll(c.Request.Body)
@@ -36,6 +38,7 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	}
 	url := strings.TrimSpace(string(body))
 
+	// Работа без явной транзакции, но с проверкой существования и создания записи
 	shortURL, err := s.StructService.Set(url)
 	if err != nil {
 		shortURL, err = s.StructService.GetExistURL(url, err)
@@ -46,10 +49,11 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 		httpStatus = http.StatusConflict
 	}
 
-	c.Header("Content-Type", "application/json")
+	c.Header("Content-Type", "text/plain")
 	c.String(httpStatus, shortURL)
 }
 
+// ShortenURLJSON обрабатывает запрос на сокращение URL-адреса в формате JSON
 func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	var decoderBody Request
 	httpStatus := http.StatusCreated
@@ -62,6 +66,7 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	}
 	url := strings.TrimSpace(decoderBody.URL)
 
+	// Работа без явной транзакции, но с проверкой существования и создания записи
 	shortURL, err := s.StructService.Set(url)
 	if err != nil {
 		shortURL, err = s.StructService.GetExistURL(url, err)
@@ -75,16 +80,18 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	c.JSON(httpStatus, Response{Result: shortURL})
 }
 
+// RedirectToOriginalURL обрабатывает запрос на перенаправление по сокращенному URL-адресу
 func (s *RestAPI) RedirectToOriginalURL(c *gin.Context) {
 	shortID := c.Param("id")
 	originalURL, exists := s.StructService.Get(shortID)
 	if !exists {
-		c.String(http.StatusNotFound, "URL не найден")
+		c.String(http.StatusTemporaryRedirect, "URL не найден")
 		return
 	}
 	c.Redirect(http.StatusTemporaryRedirect, originalURL)
 }
 
+// ShortenURLsJSON обрабатывает запрос на сокращение нескольких URL-адресов в формате JSON
 func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 	var decoderBody []RequestBodyURLs
 	httpStatus := http.StatusCreated
@@ -117,6 +124,7 @@ func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 	c.JSON(httpStatus, URLResponses)
 }
 
+// Ping обрабатывает запрос на проверку работоспособности сервиса
 func (s *RestAPI) Ping(ctx *gin.Context) {
 	if err := s.StructService.Ping(); err != nil {
 		ctx.Status(http.StatusInternalServerError)
