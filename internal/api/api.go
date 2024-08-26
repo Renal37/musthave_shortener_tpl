@@ -62,7 +62,7 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB
 	signal.Notify(quit, os.Interrupt)
 	// Запускаем горутину для запуска сервера на указанном адресе
 	go func() {
-		err := server.ListenAndServe()  // Используем сервер для запуска
+		err := r.Run(ServerAddr)
 		if err != nil && err != http.ErrServerClosed {
 			fmt.Println("Не удалось запустить сервер:", err)
 		}
