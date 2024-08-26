@@ -59,7 +59,7 @@ func createTable(db *sql.DB) error {
     	deletedFlag BOOLEAN DEFAULT FALSE
 	);
 	DO $$ 
-	BEGIN 
+	BEGIN 	
    	 IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'urls' AND indexname = 'idx_original_url') THEN
         CREATE UNIQUE INDEX idx_original_url ON urls(original_url);
     END IF;

@@ -43,9 +43,9 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	userID, _ := userIDFromContext.(string)
 
 	url := strings.TrimSpace(string(body))
-	shortURL, err := s.StructService.Set(userID, url)
+	shortURL, err := s.Shortener.Set(userID, url)
 	if err != nil {
-		shortURL, err = s.StructService.GetExistURL(url, err)
+		shortURL, err = s.Shortener.GetExistURL(url, err)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Не удалось сократить URL", http.StatusInternalServerError)
 			return
@@ -77,9 +77,9 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	userID, _ := userIDFromContext.(string)
 
 	url := strings.TrimSpace(decoderBody.URL)
-	shortURL, err := s.StructService.Set(userID, url)
+	shortURL, err := s.Shortener.Set(userID, url)
 	if err != nil {
-		shortURL, err = s.StructService.GetExistURL(url, err)
+		shortURL, err = s.Shortener.GetExistURL(url, err)
 		if err != nil {
 			errorMessage := map[string]interface{}{
 				"message": "Не удалось сократить URL",
@@ -109,7 +109,7 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 func (s *RestAPI) RedirectToOriginalURL(c *gin.Context) {
 	code := http.StatusTemporaryRedirect
 	shortID := c.Param("id")
-	originalURL, err := s.StructService.Get(shortID)
+	originalURL, err := s.Shortener.Get(shortID)
 	if err != nil {
 		if err.Error() == http.StatusText(http.StatusGone) {
 			c.Status(http.StatusGone)
@@ -150,9 +150,9 @@ func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 	var URLResponses []ResponseBodyURLs
 	for _, req := range decoderBody {
 		url := strings.TrimSpace(req.OriginalURL)
-		shortURL, err := s.StructService.Set(userID, url)
+		shortURL, err := s.Shortener.Set(userID, url)
 		if err != nil {
-			shortURL, err = s.StructService.GetExistURL(url, err)
+			shortURL, err = s.Shortener.GetExistURL(url, err)
 			if err != nil {
 				errorMessage := map[string]interface{}{
 					"message": "Не удалось сократить URL",
@@ -193,7 +193,7 @@ func (s *RestAPI) ShortenURLsJSON(c *gin.Context) {
 
 // Ping проверяет доступность сервиса.
 func (s *RestAPI) Ping(ctx *gin.Context) {
-	err := s.StructService.Ping()
+	err := s.Shortener.Ping()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Внутренняя ошибка сервера"})
 		return
@@ -219,7 +219,7 @@ func (s *RestAPI) UserURLsHandler(ctx *gin.Context) {
 		return
 	}
 	userID, _ := userIDFromContext.(string)
-	urls, err := s.StructService.GetFullRep(userID)
+	urls, err := s.Shortener.GetFullRep(userID)
 	ctx.Header("Content-type", "application/json")
 	if err != nil {
 		if err.Error() == http.StatusText(http.StatusGone) {
@@ -264,7 +264,7 @@ func (s *RestAPI) DeleteUserUrls(ctx *gin.Context) {
 		return
 	}
 
-	err := s.StructService.DeleteURLsRep(userID, shortURLs)
+	err := s.Shortener.DeleteURLsRep(userID, shortURLs)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Не удалось удалить URL",

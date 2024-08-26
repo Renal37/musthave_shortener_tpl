@@ -30,7 +30,7 @@ func Test_shortenURLHandler(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			args: args{
 				code:        201,
@@ -78,7 +78,7 @@ func Test_shortenURLHandlerJSON(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			args: args{
 				code:        201,
@@ -135,7 +135,7 @@ func Test_shortenURLsHandlerJSON(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			args: args{
 				code:        201,
@@ -195,7 +195,7 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			argsGet: argsGet{
 				code:     307,
@@ -207,7 +207,7 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 
 	for _, tt := range testsGET {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.Storage.StructService.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
+			tt.Storage.Shortener.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
 
 			r := gin.Default()
 			r.GET("/:id", tt.Storage.RedirectToOriginalURL)
