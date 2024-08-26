@@ -12,4 +12,5 @@ func (s *RestAPI) setRoutes(r *gin.Engine) {
 	r.GET("/ping", s.Ping)
 	r.POST("/api/shorten/batch", s.ShortenURLsJSON)
 	r.GET("/api/user/urls", s.UserURLsHandler)
+	r.DELETE("/api/user/urls", s.DeleteUserUrls)
 }

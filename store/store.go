@@ -3,8 +3,10 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"net/http"
 	"time"
 )
 
@@ -53,7 +55,8 @@ func createTable(db *sql.DB) error {
 		short_id VARCHAR(256) NOT NULL UNIQUE,
 		original_url TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    	userID VARCHAR(360)
+    	userID VARCHAR(360),
+    	deletedFlag BOOLEAN DEFAULT FALSE
 	);
 	DO $$ 
 	BEGIN 
@@ -72,7 +75,7 @@ func createTable(db *sql.DB) error {
 
 // GetFull возвращает все ссылки пользователя в виде массива карт.
 func (s *StoreDB) GetFull(userID string, BaseURL string) ([]map[string]string, error) {
-	query := `SELECT short_id, original_url FROM urls WHERE userID = $1`
+	query := `SELECT short_id, original_url, deletedFlag FROM urls WHERE userID = $1`
 	rows, err := s.db.Query(query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при получении ссылок: %w", err)
@@ -81,9 +84,17 @@ func (s *StoreDB) GetFull(userID string, BaseURL string) ([]map[string]string, e
 
 	urls := make([]map[string]string, 0)
 	for rows.Next() {
-		var shortID, originalURL string
-		if err = rows.Scan(&shortID, &originalURL); err != nil {
+		var (
+			shortID     string
+			originalURL string
+			deletedFlag bool
+		)
+		if err = rows.Scan(&shortID, &originalURL, &deletedFlag); err != nil {
 			return nil, fmt.Errorf("ошибка при сканировании строки: %w", err)
+		}
+		if deletedFlag {
+			err = errors.New(http.StatusText(http.StatusGone))
+			return make([]map[string]string, 0), err
 		}
 		shortURL := fmt.Sprintf("%s/%s", BaseURL, shortID)
 		urlMap := map[string]string{"short_url": shortURL, "original_url": originalURL}
@@ -94,6 +105,21 @@ func (s *StoreDB) GetFull(userID string, BaseURL string) ([]map[string]string, e
 	}
 
 	return urls, nil
+}
+
+// DeleteURLs помечает ссылки как удаленные для определенного пользователя.
+func (s *StoreDB) DeleteURLs(userID string, shortURL string, updateChan chan<- string) error {
+	query := `
+		UPDATE urls
+		SET deletedFlag = true
+		WHERE short_id = $1 AND userID = $2`
+
+	_, err := s.db.Exec(query, shortURL, userID)
+	if err != nil {
+		return fmt.Errorf("ошибка при обновлении записи: %w", err)
+	}
+	updateChan <- shortURL
+	return nil
 }
 
 // Get возвращает либо оригинальную ссылку по сокращенной, либо сокращенную ссылку по оригинальной.
@@ -108,15 +134,23 @@ func (s *StoreDB) Get(shortURL string, originalURL string) (string, error) {
 	}
 
 	query := fmt.Sprintf(`
-        SELECT %s 
+        SELECT %s, deletedFlag 
         FROM urls 
         WHERE %s = $1
     `, field1, field2)
 
-	var answer string
-	err := s.db.QueryRow(query, field).Scan(&answer)
+	var (
+		answer      string
+		deletedFlag bool
+	)
+	err := s.db.QueryRow(query, field).Scan(&answer, &deletedFlag)
 	if err != nil {
 		return "", fmt.Errorf("ошибка при получении данных: %w", err)
+	}
+
+	if deletedFlag {
+		err = errors.New(http.StatusText(http.StatusGone))
+		return "", err
 	}
 
 	return answer, nil
