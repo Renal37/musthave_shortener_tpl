@@ -4,12 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"io"
 	"os"
 	"strconv"
-
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
 type Memory struct {
@@ -36,7 +35,7 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 			if err == io.EOF {
 				break
 			} else {
-				fmt.Println("error decode JSON:", err)
+				fmt.Println("Ошибка при декодировании JSON:", err)
 				break
 			}
 		}
@@ -53,13 +52,13 @@ func Set(storageInstance *storage.Storage, filePath string, BaseURL string) erro
 	}
 	defer file.Close()
 	maxUUID := 0
-	for key, value := range storageInstance.URLs {
-		shortURL := fmt.Sprintf("%s/%s", BaseURL, key)
+	for shortURL, originalURL := range storageInstance.URLs {
+		//shortURL := fmt.Sprintf("%s/%s", BaseURL, key)
 		maxUUID += 1
 		ShortCollector := ShortCollector{
 			strconv.Itoa(maxUUID),
 			shortURL,
-			value,
+			originalURL,
 		}
 		writer := bufio.NewWriter(file)
 		err = writeEvent(&ShortCollector, writer)
