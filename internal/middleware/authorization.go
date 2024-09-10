@@ -22,7 +22,7 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userInfo, err := getUserIDFromCookie(c)
 		if err != nil {
-			code := http.StatusInternalServerError
+			code := http.StatusUnauthorized
 			contentType := c.Request.Header.Get("Content-Type")
 			if contentType == "application/json" {
 				c.Header("Content-Type", "application/json")

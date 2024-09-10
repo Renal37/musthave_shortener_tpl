@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"io"
 	"os"
 	"strconv"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
 type Memory struct {
@@ -17,7 +18,7 @@ type Memory struct {
 }
 type ShortCollector struct {
 	NumberUUID  string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
+	shortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
 
@@ -40,7 +41,7 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 			}
 		}
 		maxUUID += 1
-		storageInstance.Set(event.OriginalURL, event.ShortURL)
+		storageInstance.Set(event.OriginalURL, event.shortURL)
 	}
 	return nil
 }
