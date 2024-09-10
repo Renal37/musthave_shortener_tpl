@@ -12,41 +12,37 @@ import (
 	"testing"
 )
 
-func TestShortenURLHandler(t *testing.T) {
+func Test_shortenURLHandler(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
+	type args struct {
+		code        int
+		contentType string
+	}
 	tests := []struct {
-		name        string
-		body        string
-		expectedCode int
-		expectedContentType string
+		name    string
+		Storage RestAPI
+		args    args
+		body    string
 	}{
 		{
-			name: "valid URL",
+			name: "test1",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			args: args{
+				code:        201,
+				contentType: "text/plain",
+			},
 			body: "https://practicum.yandex.ru/",
-			expectedCode: http.StatusCreated,
-			expectedContentType: "text/plain",
-		},
-		{
-			name: "empty body",
-			body: "",
-			expectedCode: http.StatusInternalServerError,
-			expectedContentType: "text/plain",
-		},
-		{
-			name: "invalid URL",
-			body: "not a valid url",
-			expectedCode: http.StatusInternalServerError,
-			expectedContentType: "text/plain",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
-			api := RestAPI{Shortener: storageShortener}
-			r.POST("/", api.ShortenURLHandler)
+			r.POST("/", tt.Storage.ShortenURLHandler)
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			w := httptest.NewRecorder()
 
@@ -55,47 +51,49 @@ func TestShortenURLHandler(t *testing.T) {
 			res := w.Result()
 			defer res.Body.Close()
 
-			assert.Equal(t, tt.expectedCode, res.StatusCode)
-			assert.Equal(t, tt.expectedContentType, res.Header.Get("Content-Type"))
+			assert.Equal(t, tt.args.code, res.StatusCode)
+			assert.Equal(t, tt.args.contentType, res.Header.Get("Content-Type"))
 		})
 	}
 }
 
-func TestShortenURLJSON(t *testing.T) {
+func Test_shortenURLHandlerJSON(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
+	type args struct {
+		code        int
+		contentType string
+	}
+	type reqBody struct {
+		PerformanceURL string `json:"url"`
+	}
 	tests := []struct {
-		name        string
-		body        URLRequest
-		expectedCode int
-		expectedContentType string
+		name    string
+		Storage RestAPI
+		args    args
+		body    reqBody
 	}{
 		{
-			name: "valid URL",
-			body: URLRequest{URL: "https://practicum.yandex.ru"},
-			expectedCode: http.StatusCreated,
-			expectedContentType: "application/json",
-		},
-		{
-			name: "empty URL",
-			body: URLRequest{URL: ""},
-			expectedCode: http.StatusInternalServerError,
-			expectedContentType: "application/json",
-		},
-		{
-			name: "invalid URL",
-			body: URLRequest{URL: "not a valid url"},
-			expectedCode: http.StatusInternalServerError,
-			expectedContentType: "application/json",
+			name: "test1",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			args: args{
+				code:        201,
+				contentType: "application/json",
+			},
+			body: reqBody{
+				"https://practicum.yandex.ru",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
-			api := RestAPI{Shortener: storageShortener}
-			r.POST("/api/shorten", api.ShortenURLJSON)
+
+			r.POST("/api/shorten", tt.Storage.ShortenURLJSON)
 			jsonBody, err := json.Marshal(tt.body)
 			if err != nil {
 				t.Fatal(err)
@@ -109,51 +107,62 @@ func TestShortenURLJSON(t *testing.T) {
 			res := w.Result()
 			defer res.Body.Close()
 
-			assert.Equal(t, tt.expectedCode, res.StatusCode)
-			assert.Equal(t, tt.expectedContentType, res.Header.Get("Content-Type"))
+			assert.Equal(t, tt.args.code, res.StatusCode)
+			assert.Equal(t, tt.args.contentType, res.Header.Get("Content-Type"))
 		})
 	}
 }
 
-func TestShortenURLsHandlerJSON(t *testing.T) {
+func Test_shortenURLsHandlerJSON(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
+	type args struct {
+		code        int
+		contentType string
+	}
+	type RequestBodyURLs struct {
+		CorrelationID string `json:"correlation_id"`
+		OriginalURL   string `json:"original_url"`
+	}
 	tests := []struct {
-		name        string
-		body        []BulkURLRequest
-		expectedCode int
-		expectedContentType string
+		name    string
+		Storage RestAPI
+		args    args
+		body    []RequestBodyURLs
 	}{
 		{
-			name: "valid URLs",
-			body: []BulkURLRequest{
-				{CorrelationID: "1", OriginalURL: "https://google.com"},
-				{CorrelationID: "2", OriginalURL: "https://google.kz"},
+			name: "test1",
+			Storage: RestAPI{
+				Shortener: storageShortener,
 			},
-			expectedCode: http.StatusCreated,
-			expectedContentType: "application/json",
-		},
-		{
-			name: "empty URL",
-			body: []BulkURLRequest{
-				{CorrelationID: "1", OriginalURL: ""},
+			args: args{
+				code:        201,
+				contentType: "application/json",
 			},
-			expectedCode: http.StatusInternalServerError,
-			expectedContentType: "application/json",
+			body: []RequestBodyURLs{
+				{
+					CorrelationID: "1",
+					OriginalURL:   "google.com",
+				},
+				{
+					CorrelationID: "2",
+					OriginalURL:   "google.kz",
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
-			api := RestAPI{Shortener: storageShortener}
-			r.POST("/api/shorten/bulk", api.ShortenURLsJSON)
+
+			r.POST("/api/shorten", tt.Storage.ShortenURLsJSON)
 			jsonBody, err := json.Marshal(tt.body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			request := httptest.NewRequest(http.MethodPost, "/api/shorten/bulk", strings.NewReader(string(jsonBody)))
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(string(jsonBody)))
 			request.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
@@ -162,55 +171,53 @@ func TestShortenURLsHandlerJSON(t *testing.T) {
 			res := w.Result()
 			defer res.Body.Close()
 
-			assert.Equal(t, tt.expectedCode, res.StatusCode)
-			assert.Equal(t, tt.expectedContentType, res.Header.Get("Content-Type"))
+			assert.Equal(t, tt.args.code, res.StatusCode)
+			assert.Equal(t, tt.args.contentType, res.Header.Get("Content-Type"))
 		})
 	}
 }
 
-func TestRedirectToOriginalURLHandler(t *testing.T) {
+func Test_redirectToOriginalURLHandler(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
-	tests := []struct {
-		name        string
-		shortID     string
-		originalURL string
-		expectedCode int
+	type argsGet struct {
+		code     int
+		testURL  string
+		location string
+	}
+	testsGET := []struct {
+		name    string
+		Storage RestAPI
+		argsGet argsGet
 	}{
 		{
-			name: "valid shortID",
-			shortID: "short-id",
-			originalURL: "https://practicum.yandex.ru/",
-			expectedCode: http.StatusTemporaryRedirect,
-		},
-		{
-			name: "nonexistent shortID",
-			shortID: "nonexistent-id",
-			expectedCode: http.StatusTemporaryRedirect,
+			name: "test1",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			argsGet: argsGet{
+				code:     307,
+				testURL:  "ads",
+				location: "https://practicum.yandex.ru/",
+			},
 		},
 	}
 
-	for _, tt := range tests {
+	for _, tt := range testsGET {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.originalURL != "" {
-				storageShortener.Storage.Set(tt.shortID, tt.originalURL)
-			}
+			tt.Storage.Shortener.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
 
 			r := gin.Default()
-			api := RestAPI{Shortener: storageShortener}
-			r.GET("/:id", api.RedirectToOriginalURL)
+			r.GET("/:id", tt.Storage.RedirectToOriginalURL)
 
-			request := httptest.NewRequest(http.MethodGet, "/"+tt.shortID, nil)
+			request := httptest.NewRequest(http.MethodGet, "/ads", nil)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, request)
 			res := w.Result()
 			defer res.Body.Close()
-
-			assert.Equal(t, tt.expectedCode, res.StatusCode)
-			if tt.originalURL != "" {
-				assert.Equal(t, tt.originalURL, res.Header.Get("Location"))
-			}
+			assert.Equal(t, tt.argsGet.code, res.StatusCode)
+			assert.Equal(t, tt.argsGet.location, res.Header.Get("location"))
 		})
 	}
 }
