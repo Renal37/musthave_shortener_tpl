@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-   "strings"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -113,47 +112,19 @@ func (s *StoreDB) GetFull(userID string, BaseURL string) ([]map[string]string, e
 
 	return urls, nil
 }
-func (s *StoreDB) DeleteURLs(userID string, shortURLs string, updateChan chan<- string) error {
-    // Преобразование строки URL в срез строк
-    urls := strings.Split(shortURLs, ",")
+func (s *StoreDB) DeleteURLs(userID string, shortURL string, updateChan chan<- string) error {
+	query := `
+		UPDATE urls
+		SET deletedFlag = true
+		WHERE short_id = $1 and  userID = $2`
 
-    if len(urls) == 0 {
-        return nil // Нечего удалять
-    }
-
-    // Создание плейсхолдеров для запроса
-    placeholders := make([]string, len(urls))
-    for i := range urls {
-        placeholders[i] = fmt.Sprintf("$%d", i+1)
-    }
-
-    query := fmt.Sprintf(`
-        UPDATE urls
-        SET deletedFlag = true
-        WHERE short_id IN (%s) AND userID = $%d
-    `, strings.Join(placeholders, ", "), len(urls)+1)
-
-    // Создание аргументов для запроса
-    args := make([]interface{}, len(urls)+1)
-    for i, url := range urls {
-        args[i] = url
-    }
-    args[len(urls)] = userID
-
-    // Выполнение запроса
-    _, err := s.db.Exec(query, args...)
-    if err != nil {
-        return fmt.Errorf("ошибка при удалении URL-ов: %w", err)
-    }
-
-    // Отправка уведомлений
-    for _, url := range urls {
-        updateChan <- url
-    }
-
-    return nil
+	_, err := s.db.Exec(query, shortURL, userID)
+	if err != nil {
+		return err
+	}
+	updateChan <- shortURL
+	return nil
 }
-
 
 // Получение URL или короткой ссылки
 func (s *StoreDB) Get(shortURL, originalURL string) (string, error) {
