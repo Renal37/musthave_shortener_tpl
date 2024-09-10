@@ -18,7 +18,7 @@ type Memory struct {
 }
 type ShortCollector struct {
 	NumberUUID  string `json:"uuid"`
-	shortURL    string `json:"short_url"`
+	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
 
@@ -41,7 +41,7 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 			}
 		}
 		maxUUID += 1
-		storageInstance.Set(event.OriginalURL, event.shortURL)
+		storageInstance.Set(event.OriginalURL, event.ShortURL)
 	}
 	return nil
 }
