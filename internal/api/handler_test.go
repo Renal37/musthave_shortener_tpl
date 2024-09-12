@@ -2,10 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -29,7 +29,7 @@ func Test_shortenURLHandler(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			args: args{
 				code:        201,
@@ -57,7 +57,7 @@ func Test_shortenURLHandler(t *testing.T) {
 	}
 }
 
-func Test_shortenURLHandlerURLJSON(t *testing.T) {
+func Test_shortenURLHandlerJSON(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
@@ -66,7 +66,7 @@ func Test_shortenURLHandlerURLJSON(t *testing.T) {
 		contentType string
 	}
 	type reqBody struct {
-		PerformanceURL string `json:"url"`
+		URL string `json:"url"`
 	}
 	tests := []struct {
 		name    string
@@ -77,14 +77,14 @@ func Test_shortenURLHandlerURLJSON(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			args: args{
 				code:        201,
 				contentType: "application/json",
 			},
 			body: reqBody{
-				"https://practicum.yandex.ru",
+				URL: "https://practicum.yandex.ru",
 			},
 		},
 	}
@@ -112,6 +112,7 @@ func Test_shortenURLHandlerURLJSON(t *testing.T) {
 		})
 	}
 }
+
 func Test_shortenURLsHandlerJSON(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
@@ -133,7 +134,7 @@ func Test_shortenURLsHandlerJSON(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			args: args{
 				code:        201,
@@ -156,12 +157,12 @@ func Test_shortenURLsHandlerJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
 
-			r.POST("/api/shorten", tt.Storage.ShortenURLsJSON)
+			r.POST("/api/shorten/batch", tt.Storage.ShortenURLsJSON) // Обратите внимание на измененный путь
 			jsonBody, err := json.Marshal(tt.body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(string(jsonBody)))
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", strings.NewReader(string(jsonBody)))
 			request.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
@@ -193,7 +194,7 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 		{
 			name: "test1",
 			Storage: RestAPI{
-				StructService: storageShortener,
+				Shortener: storageShortener,
 			},
 			argsGet: argsGet{
 				code:     307,
@@ -205,7 +206,7 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 
 	for _, tt := range testsGET {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.Storage.StructService.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
+			tt.Storage.Shortener.Storage.Set(tt.argsGet.testURL, tt.argsGet.location)
 
 			r := gin.Default()
 			r.GET("/:id", tt.Storage.RedirectToOriginalURL)
@@ -216,7 +217,10 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 			res := w.Result()
 			defer res.Body.Close()
 			assert.Equal(t, tt.argsGet.code, res.StatusCode)
-			assert.Equal(t, tt.argsGet.location, res.Header.Get("location"))
+			assert.Equal(t, tt.argsGet.location, res.Header.Get("Location"))
 		})
 	}
 }
+
+
+

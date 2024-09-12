@@ -34,7 +34,7 @@ func (a *App) Start() {
 	}
 
 	dbDNSTurn := true
-	if a.config.DBPath == "" {
+	if a.UseDatabase()  {
 		// Заполняем хранилище данными из файла
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
@@ -51,12 +51,15 @@ func (a *App) Start() {
 		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
 	}
 }
+func (a *App) UseDatabase() bool {
+	return a.config.DBPath == ""
+}
 
 // Stop останавливает приложение: сохраняет данные из хранилища в файл
 func (a *App) Stop() {
 	// Сохраняем данные из хранилища в файл
-	if a.config.DBPath == "" {
-		err := dump.Set(a.storageInstance, a.config.FilePath, a.config.BaseURL)
+	if a.UseDatabase() {
+		err := dump.Set(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			// Выводим ошибку, если не удалось сохранить данные
 			fmt.Printf("Ошибка при сохранении данных: %v\n", err)

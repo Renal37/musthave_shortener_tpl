@@ -1,0 +1,10 @@
+.PHONY: run migrateup migratedown
+
+run:
+	go run cmd/shortener/main.go
+
+migrateup: run
+	"host=localhost port=5432 user=postgres password=nbvpass dbname=postgres sslmode=disable"
+
+debug:
+	dlv
