@@ -223,4 +223,55 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 }
 
 
+func Test_deleteUserUrls(t *testing.T) {
+	storageInstance := storage.NewStorage()
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
+
+	tests := []struct {
+		name    string
+		Storage RestAPI
+		code    int
+		userID  string
+		urls    []string
+	}{
+		{
+			name:    "test1",
+			Storage: RestAPI{Shortener: storageShortener},
+			code:    http.StatusAccepted,
+			userID:  "user1",
+			urls:    []string{"https://practicum.yandex.ru/"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Устанавливаем URL в хранилище перед тестированием
+			for _, url := range tt.urls {
+				tt.Storage.Shortener.Storage.Set(tt.userID, url)
+			}
+
+			r := gin.Default()
+			r.DELETE("/user/urls", func(c *gin.Context) {
+				c.Set("userID", tt.userID)
+				tt.Storage.DeleteUserUrls(c)
+			})
+
+			// Убедимся, что передаем корректные данные в теле запроса
+			jsonBody, err := json.Marshal(tt.urls)
+			if err != nil {
+				t.Fatal(err)
+			}
+			request := httptest.NewRequest(http.MethodDelete, "/user/urls", strings.NewReader(string(jsonBody)))
+			request.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			// Проверяем статус кода
+			assert.Equal(t, tt.code, res.StatusCode)
+		})
+	}
+}
 
