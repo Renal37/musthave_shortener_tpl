@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	// "strings"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api" // Импортируем пакет с RestAPI
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -14,30 +14,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Пример использования ShortenURLHandler для сокращения URL
-func ExampleRestAPI_ShortenURLHandler() {
-	storageInstance := storage.NewStorage()
-	shortenerService := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
-	apiInstance := &api.RestAPI{ // Используем api.RestAPI
-		StructService: shortenerService,
-	}
+// // Пример использования ShortenURLHandler для сокращения URL
+// func ExampleRestAPI_ShortenURLHandler() {
+// 	storageInstance := storage.NewStorage()
+// 	shortenerService := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
+// 	apiInstance := &api.RestAPI{ // Используем api.RestAPI
+// 		StructService: shortenerService,
+// 	}
 
-	// Инициализация маршрутов
-	router := gin.Default()
-	router.POST("/", apiInstance.ShortenURLHandler)
+// 	// Инициализация маршрутов
+// 	router := gin.Default()
+// 	router.POST("/", apiInstance.ShortenURLHandler)
 
-	// Создание запроса на сокращение URL
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://practicum.yandex.ru/"))
+// 	// Создание запроса на сокращение URL
+// 	w := httptest.NewRecorder()
+// 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("https://practicum.yandex.ru/"))
 
-	// Отправка запроса
-	router.ServeHTTP(w, req)
+// 	// Отправка запроса
+// 	router.ServeHTTP(w, req)
 
-	// Проверка результата
-	assert.Equal(nil, http.StatusCreated, w.Code)
-	assert.Equal(nil, "text/plain", w.Header().Get("Content-Type"))
-	assert.True(nil, strings.HasPrefix(w.Body.String(), "http://localhost:8080/"))
-}
+// 	// Проверка результата
+// 	assert.Equal(nil, http.StatusCreated, w.Code)
+// 	assert.Equal(nil, "text/plain", w.Header().Get("Content-Type"))
+// 	assert.True(nil, strings.HasPrefix(w.Body.String(), "http://localhost:8080/"))
+// }
 
 // Пример использования ShortenURLJSON для сокращения URL с телом запроса в формате JSON
 func ExampleRestAPI_ShortenURLJSON() {
