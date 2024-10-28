@@ -4,12 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
-)
-
-// Подключаем драйвер базы данных PostgreSQL
-import (
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"time"
 )
 
 type StoreDB struct {
@@ -22,10 +18,9 @@ type ResponseBodyURLs struct {
 	ShortURL      string `json:"short_url"`
 	OriginalURL   string `json:"original_url"`
 }
-
 // Инициализация базы данных
 func InitDatabase(DatabasePath string) (*StoreDB, error) {
-	db, err := sql.Open("pgx", DatabasePath)
+	db, err := sql.Open("pgx", DatabasePath) // Открытие соединения с базой данных
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при открытии базы данных: %w", err)
 	}
@@ -33,7 +28,7 @@ func InitDatabase(DatabasePath string) (*StoreDB, error) {
 	storeDB := &StoreDB{db: db}
 
 	if DatabasePath != "" {
-		err = createTable(db)
+		err = createTable(db) // Создание таблицы, если путь к базе данных не пустой
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при создании таблицы в базе данных: %w", err)
 		}
@@ -48,39 +43,12 @@ func (s *StoreDB) Create(originalURL, shortURL string) error {
         INSERT INTO urls (short_id, original_url) 
         VALUES ($1, $2)
     `
-	_, err := s.db.Exec(query, shortURL, originalURL)
+	_, err := s.db.Exec(query, shortURL, originalURL) // Вставка данных в таблицу
 	if err != nil {
 		return fmt.Errorf("ошибка при создании записи: %w", err)
 	}
 	return nil
 }
-
-// Создание таблицы, если она не существует
-func createTable(db *sql.DB) error {
-	query := `
-		CREATE TABLE IF NOT EXISTS urls (
-			id SERIAL PRIMARY KEY,
-			user_id VARCHAR(256) NOT NULL,
-			short_id VARCHAR(256) NOT NULL UNIQUE,
-			original_url TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);
-		DO $$ 
-		BEGIN 
-			IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'urls' AND indexname = 'idx_original_url') THEN
-				CREATE UNIQUE INDEX idx_original_url ON urls(original_url);
-			END IF;
-		END $$;
-	`
-
-	_, err := db.Exec(query)
-	if err != nil {
-		return fmt.Errorf("ошибка при создании таблицы: %w", err)
-	}
-
-	return nil
-}
-
 // Получение всех URL для определенного пользователя по authHeader
 func (s *StoreDB) GetUserURLsByAuth(authHeader string) ([]ResponseBodyURLs, error) {
 	query := `
@@ -113,6 +81,31 @@ func (s *StoreDB) GetUserURLsByAuth(authHeader string) ([]ResponseBodyURLs, erro
 	return userURLs, nil
 }
 
+// Создание таблицы, если она не существует
+func createTable(db *sql.DB) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS urls (
+			id SERIAL PRIMARY KEY,
+			short_id VARCHAR(256) NOT NULL UNIQUE,
+			original_url TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		DO $$ 
+		BEGIN 
+			IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'urls' AND indexname = 'idx_original_url') THEN
+				CREATE UNIQUE INDEX idx_original_url ON urls(original_url);
+			END IF;
+		END $$;
+	`
+
+	_, err := db.Exec(query) // Выполнение SQL-запроса для создания таблицы
+	if err != nil {
+		return fmt.Errorf("ошибка при создании таблицы: %w", err)
+	}
+
+	return nil
+}
+
 // Получение оригинального или сокращённого URL из базы данных
 func (s *StoreDB) Get(shortURL, originalURL string) (string, error) {
 	field1 := "original_url"
@@ -130,7 +123,7 @@ func (s *StoreDB) Get(shortURL, originalURL string) (string, error) {
     `, field1, field2)
 
 	var result string
-	err := s.db.QueryRow(query, field).Scan(&result)
+	err := s.db.QueryRow(query, field).Scan(&result) // Выполнение запроса и сканирование результата
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", fmt.Errorf("запись не найдена: %w", err)
