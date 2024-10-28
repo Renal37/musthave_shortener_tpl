@@ -4,17 +4,28 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/jackc/pgx/v4/stdlib"
 	"time"
+)
+
+// Подключаем драйвер базы данных PostgreSQL
+import (
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 type StoreDB struct {
 	db *sql.DB
 }
 
+// ResponseBodyURLs определяет структуру данных для ответа с URL
+type ResponseBodyURLs struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
+	OriginalURL   string `json:"original_url"`
+}
+
 // Инициализация базы данных
 func InitDatabase(DatabasePath string) (*StoreDB, error) {
-	db, err := sql.Open("pgx", DatabasePath) // Открытие соединения с базой данных
+	db, err := sql.Open("pgx", DatabasePath)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при открытии базы данных: %w", err)
 	}
@@ -22,7 +33,7 @@ func InitDatabase(DatabasePath string) (*StoreDB, error) {
 	storeDB := &StoreDB{db: db}
 
 	if DatabasePath != "" {
-		err = createTable(db) // Создание таблицы, если путь к базе данных не пустой
+		err = createTable(db)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при создании таблицы в базе данных: %w", err)
 		}
@@ -37,7 +48,7 @@ func (s *StoreDB) Create(originalURL, shortURL string) error {
         INSERT INTO urls (short_id, original_url) 
         VALUES ($1, $2)
     `
-	_, err := s.db.Exec(query, shortURL, originalURL) // Вставка данных в таблицу
+	_, err := s.db.Exec(query, shortURL, originalURL)
 	if err != nil {
 		return fmt.Errorf("ошибка при создании записи: %w", err)
 	}
@@ -49,6 +60,7 @@ func createTable(db *sql.DB) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS urls (
 			id SERIAL PRIMARY KEY,
+			user_id VARCHAR(256) NOT NULL,
 			short_id VARCHAR(256) NOT NULL UNIQUE,
 			original_url TEXT NOT NULL,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -61,12 +73,44 @@ func createTable(db *sql.DB) error {
 		END $$;
 	`
 
-	_, err := db.Exec(query) // Выполнение SQL-запроса для создания таблицы
+	_, err := db.Exec(query)
 	if err != nil {
 		return fmt.Errorf("ошибка при создании таблицы: %w", err)
 	}
 
 	return nil
+}
+
+// Получение всех URL для определенного пользователя по authHeader
+func (s *StoreDB) GetUserURLsByAuth(authHeader string) ([]ResponseBodyURLs, error) {
+	query := `
+        SELECT short_id, original_url 
+        FROM urls 
+        WHERE user_id = $1
+    `
+	rows, err := s.db.Query(query, authHeader)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при выполнении запроса: %w", err)
+	}
+	defer rows.Close()
+
+	var userURLs []ResponseBodyURLs
+	for rows.Next() {
+		var url ResponseBodyURLs
+		url.CorrelationID = authHeader // Используем authHeader как корреляционный ID
+		err := rows.Scan(&url.ShortURL, &url.OriginalURL)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при обработке результата: %w", err)
+		}
+		url.ShortURL = fmt.Sprintf("http://localhost:8080/%s", url.ShortURL)
+		userURLs = append(userURLs, url)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка при итерации по строкам: %w", err)
+	}
+
+	return userURLs, nil
 }
 
 // Получение оригинального или сокращённого URL из базы данных
@@ -86,7 +130,7 @@ func (s *StoreDB) Get(shortURL, originalURL string) (string, error) {
     `, field1, field2)
 
 	var result string
-	err := s.db.QueryRow(query, field).Scan(&result) // Выполнение запроса и сканирование результата
+	err := s.db.QueryRow(query, field).Scan(&result)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", fmt.Errorf("запись не найдена: %w", err)
