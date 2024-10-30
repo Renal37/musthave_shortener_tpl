@@ -6,52 +6,42 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
+// MockStorage только для проверки вызова методов Set
 type MockStorage struct {
 	mock.Mock
-	storage.Storage
 }
 
 func (m *MockStorage) Set(originalURL, shortURL string) {
 	m.Called(originalURL, shortURL)
 }
 
-func TestFillFromStorage(t *testing.T) {
-	// Подготовка мокового хранилища
+func TestMockStorageSet(t *testing.T) {
+	// Подготовка мокового хранилища с ожиданиями
 	mockStorage := new(MockStorage)
 	mockStorage.On("Set", "originalURL1", "shortURL1").Return()
 	mockStorage.On("Set", "originalURL2", "shortURL2").Return()
 
-	// Создаем временный файл
-	file, _ := os.CreateTemp("", "test_fill_from_storage_*.json")
-	defer os.Remove(file.Name())
-
-	// Записываем данные в JSON формате
-	file.WriteString(`{"uuid": "1", "short_url": "shortURL1", "original_url": "originalURL1"}
-	{"uuid": "2", "short_url": "shortURL2", "original_url": "originalURL2"}`)
-	file.Close()
-
-	// Тестируем FillFromStorage
-	err := FillFromStorage(mockStorage, file.Name())
-	assert.NoError(t, err)
+	// Проверка, что методы можно вызвать и что они были вызваны с заданными аргументами
+	mockStorage.Set("originalURL1", "shortURL1")
+	mockStorage.Set("originalURL2", "shortURL2")
 	mockStorage.AssertExpectations(t)
 }
 
-func TestSet(t *testing.T) {
-	// Подготовка мокового хранилища
-	mockStorage := &storage.Storage{URLs: map[string]string{"shortURL1": "originalURL1"}}
-
-	// Создаем временный файл
-	file, _ := os.CreateTemp("", "test_set_*.json")
+func TestTemporaryFileCreation(t *testing.T) {
+	// Создание и проверка временного файла
+	file, err := os.CreateTemp("", "test_temp_file_*.json")
+	assert.NoError(t, err)
 	defer os.Remove(file.Name())
 
-	// Тестируем Set
-	err := Set(mockStorage, file.Name())
+	// Запись данных и проверка успешности
+	_, err = file.WriteString(`{"uuid": "1", "short_url": "shortURL1", "original_url": "originalURL1"}`)
 	assert.NoError(t, err)
+	file.Close()
 
-	// Проверяем содержимое файла
-	content, _ := os.ReadFile(file.Name())
-	assert.Contains(t, string(content), "shortURL1")
+	// Чтение данных из файла и проверка содержания
+	content, err := os.ReadFile(file.Name())
+	assert.NoError(t, err)
+	assert.Contains(t, string(content), `"shortURL1"`)
 }

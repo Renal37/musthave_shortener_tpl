@@ -24,8 +24,6 @@ func CompressMiddleware() gin.HandlerFunc {
 		if c.Request.Header.Get("Content-Type") == "application/json" ||
 			c.Request.Header.Get("Content-Type") == "text/html" {
 
-			//acceptEncodings := c.Request.Header.Values("Accept-Encoding")
-			//if foundHeader(acceptEncodings)  {
 			if strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
 				compressWriter := gzip.NewWriter(c.Writer)
 				defer compressWriter.Close()
@@ -34,8 +32,6 @@ func CompressMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		//contentEncodings := c.Request.Header.Values("Content-Encoding")
-		//if foundHeader(contentEncodings) {
 		if strings.Contains(c.Request.Header.Get("Content-Encoding"), "gzip") {
 			compressReader, err := gzip.NewReader(c.Request.Body)
 			if err != nil {

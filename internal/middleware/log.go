@@ -14,13 +14,12 @@ func LoggerMiddleware(logger *zap.SugaredLogger) gin.HandlerFunc {
 		statusCode := c.Writer.Status()
 		contentLength := int64(c.Writer.Size())
 
-		logger.Info("Request",
-			zap.String("method", c.Request.Method),
-			zap.String("path", c.Request.URL.Path),
-			zap.Duration("duration", duration),
-			zap.String("Response", ""),
-			zap.Int("statusCode", statusCode),
-			zap.Int64("contentLength", contentLength),
+		logger.Infow("Request",
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"duration", duration,
+			"statusCode", statusCode,
+			"contentLength", contentLength,
 		)
 	}
 }
