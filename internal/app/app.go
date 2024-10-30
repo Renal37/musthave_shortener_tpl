@@ -7,7 +7,7 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/Renal37/musthave_shortener_tpl.git/store"
+	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 )
 
 type App struct {
@@ -26,7 +26,7 @@ func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 // Start запускает приложение: загружает данные из файла в хранилище и запускает REST API
 func (a *App) Start() {
 	// Инициализируем базу данных
-	db, err := store.InitDatabase(a.config.DBPath)
+	db, err := repository.InitDatabase(a.config.DBPath)
 	if err != nil {
 		// Выводим ошибку, если не удалось инициализировать базу данных
 		fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
@@ -34,7 +34,7 @@ func (a *App) Start() {
 	}
 
 	dbDNSTurn := true
-	if a.config.DBPath == "" {
+	if a.UseDatabase()  {
 		// Заполняем хранилище данными из файла
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
@@ -51,12 +51,15 @@ func (a *App) Start() {
 		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
 	}
 }
+func (a *App) UseDatabase() bool {
+	return a.config.DBPath == ""
+}
 
 // Stop останавливает приложение: сохраняет данные из хранилища в файл
 func (a *App) Stop() {
 	// Сохраняем данные из хранилища в файл
-	if a.config.DBPath == "" {
-		err := dump.Set(a.storageInstance, a.config.FilePath, a.config.BaseURL)
+	if a.UseDatabase() {
+		err := dump.Set(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			// Выводим ошибку, если не удалось сохранить данные
 			fmt.Printf("Ошибка при сохранении данных: %v\n", err)
