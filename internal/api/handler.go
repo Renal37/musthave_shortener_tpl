@@ -250,7 +250,7 @@ func (s *RestAPI) DeleteUserUrls(ctx *gin.Context) {
 		return
 	}
 	userID, _ := userIDFromContext.(string)
-
+	//проверка
 	var shortURLs []string
 	if err := ctx.BindJSON(&shortURLs); err != nil {
 		code = http.StatusBadRequest
