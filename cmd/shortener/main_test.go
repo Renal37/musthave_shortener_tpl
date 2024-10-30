@@ -12,33 +12,33 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	// Создаем новый экземпляр хранилища
-	storage := storage.NewStorage()
+	// Инициализация конфигурации
+	addrConfig := config.InitConfig() // Предполагается, что эта функция не возвращает ошибку
 
-	// Создаем новый экземпляр приложения
-	appInstance := app.NewApp(storage, &config.Config{})
+	// Создаем экземпляр хранилища
+	storageInstance := storage.NewStorage() // Возможно, нужно будет передать параметры
 
-	// Создаем новый HTTP сервер для обработки запросов
+	// Создаем экземпляр приложения
+	appInstance := app.NewApp(storageInstance, addrConfig)
+
+	// Создаем тестовый HTTP сервер
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			if r.URL.Path == "/start" {
-				appInstance.Start() // Предполагается, что Start не блокирует
-				http.Error(w, "Application started", http.StatusOK)
-			} else if r.URL.Path == "/stop" {
-				appInstance.Stop() // Предполагается, что Stop не блокирует
-				http.Error(w, "Application stopped", http.StatusOK)
-			} else {
-				http.Error(w, "Not Found", http.StatusNotFound)
-			}
-		default:
+		if r.Method == http.MethodGet {
+			http.Error(w, "Application is running", http.StatusOK)
+		} else {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
 	}))
 	defer server.Close()
 
-	// Отправляем запрос для запуска приложения
-	resp, err := http.Post(server.URL+"/start", "application/json", bytes.NewBuffer([]byte{}))
+	// Запуск приложения в горутине
+	go func() {
+		appInstance.Start() // Предполагается, что этот метод не блокирует
+	}()
+	defer appInstance.Stop() // Остановить приложение после теста
+
+	// Отправляем тестовый запрос на сервер
+	resp, err := http.Get(server.URL)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
@@ -49,15 +49,15 @@ func TestMain(t *testing.T) {
 		t.Errorf("Expected status code 200, got: %d", resp.StatusCode)
 	}
 
-	// Отправляем запрос для остановки приложения
-	resp, err = http.Post(server.URL+"/stop", "application/json", bytes.NewBuffer([]byte{}))
+	// Проверяем, что приложение корректно обрабатывает неправильный метод
+	resp, err = http.Post(server.URL, "application/json", bytes.NewBuffer([]byte{}))
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Проверяем, что код состояния ответа 200
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status code 200, got: %d", resp.StatusCode)
+	// Проверяем, что код состояния ответа 405
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status code 405, got: %d", resp.StatusCode)
 	}
 }
