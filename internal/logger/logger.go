@@ -4,27 +4,19 @@ import (
 	"go.uber.org/zap"
 )
 
-var Log = zap.NewNop() // Инициализация глобального логгера с no-op логгером
+var Log *zap.SugaredLogger
 
-// Initialize инициализирует глобальный логгер с заданным уровнем логирования
 func Initialize(level string) error {
-	// Парсим уровень логирования из строки
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
-		return err // Возвращаем ошибку, если уровень логирования некорректный
+		return err
 	}
-
-	// Создаем конфигурацию для логгера в режиме "production"
 	cfg := zap.NewProductionConfig()
-	cfg.Level = lvl // Устанавливаем уровень логирования
-
-	// Строим новый логгер с указанной конфигурацией
+	cfg.Level = lvl
 	zl, err := cfg.Build()
 	if err != nil {
-		return err // Возвращаем ошибку, если не удалось создать логгер
+		return err
 	}
-
-	// Устанавливаем глобальный логгер
-	Log = zl
+	Log = zl.Sugar()
 	return nil
 }

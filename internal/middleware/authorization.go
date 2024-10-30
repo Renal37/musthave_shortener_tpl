@@ -2,12 +2,13 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
+	user "github.com/Renal37/musthave_shortener_tpl.git/internal/users"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/users"
-	"net/http"
-	"time"
 )
 
 type Claims struct {
