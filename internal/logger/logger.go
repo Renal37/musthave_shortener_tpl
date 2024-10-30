@@ -3,8 +3,7 @@ package logger
 import (
 	"go.uber.org/zap"
 )
-
-var Log = zap.NewNop() // Инициализация глобального логгера с no-op логгером
+var Log *zap.SugaredLogger
 
 // Initialize инициализирует глобальный логгер с заданным уровнем логирования
 func Initialize(level string) error {
@@ -25,6 +24,6 @@ func Initialize(level string) error {
 	}
 
 	// Устанавливаем глобальный логгер
-	Log = zl
+	Log = zl.Sugar()
 	return nil
 }
