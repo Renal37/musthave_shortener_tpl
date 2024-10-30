@@ -3,19 +3,19 @@ package services
 import (
 	"errors"
 	"fmt"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"go.uber.org/zap"
 )
 
 // Интерфейс для работы с хранилищем (БД).
 type Store interface {
-	PingStore() error                                        // Проверка соединения с хранилищем
-	Create(originalURL, shortURL, UserID string) error        // Создание новой записи в хранилище
-	Get(shortIrl string, originalURL string) (string, error)  // Получение оригинальной ссылки по сокращенной
-	GetFull(userID string, BaseURL string) ([]map[string]string, error) // Получение всех ссылок для пользователя
+	PingStore() error                                                          // Проверка соединения с хранилищем
+	Create(originalURL, shortURL, UserID string) error                         // Создание новой записи в хранилище
+	Get(shortIrl string, originalURL string) (string, error)                   // Получение оригинальной ссылки по сокращенной
+	GetFull(userID string, BaseURL string) ([]map[string]string, error)        // Получение всех ссылок для пользователя
 	DeleteURLs(userID string, shortURL string, updateChan chan<- string) error // Удаление ссылки
 }
 
@@ -27,10 +27,10 @@ type Repository interface {
 
 // Структура сервиса сокращения ссылок.
 type ShortenerService struct {
-	BaseURL   string       // Базовый URL для коротких ссылок
-	Storage   Repository   // Хранилище для кэша
-	db        Store        // База данных для работы с хранилищем
-	dbDNSTurn bool         // Флаг, указывающий использовать ли БД
+	BaseURL   string     // Базовый URL для коротких ссылок
+	Storage   Repository // Хранилище для кэша
+	db        Store      // База данных для работы с хранилищем
+	dbDNSTurn bool       // Флаг, указывающий использовать ли БД
 }
 
 // Конструктор для создания сервиса сокращения ссылок.
@@ -125,8 +125,8 @@ func (s *ShortenerService) GetFullRep(userID string) ([]map[string]string, error
 
 // Удаление нескольких ссылок через централизованный воркер.
 func (s *ShortenerService) DeleteURLsRep(userID string, shortURLs []string) error {
-	updateChan := make(chan string, len(shortURLs))  // Канал для обновления URL
-	workerChan := make(chan string, len(shortURLs))  // Канал задач для воркера
+	updateChan := make(chan string, len(shortURLs)) // Канал для обновления URL
+	workerChan := make(chan string, len(shortURLs)) // Канал задач для воркера
 
 	// Запуск воркера в отдельной горутине для обработки удалений
 	go func() {
@@ -137,7 +137,7 @@ func (s *ShortenerService) DeleteURLsRep(userID string, shortURLs []string) erro
 				logger.Log.Error("Не удалось удалить ссылку", zap.Error(err))
 			}
 		}
-		close(updateChan)  // Закрываем канал обновлений по завершении
+		close(updateChan) // Закрываем канал обновлений по завершении
 	}()
 
 	// Добавляем задачи на удаление в канал воркера
@@ -145,7 +145,7 @@ func (s *ShortenerService) DeleteURLsRep(userID string, shortURLs []string) erro
 		for _, shortURL := range shortURLs {
 			workerChan <- shortURL
 		}
-		close(workerChan)  // Закрываем канал задач, когда все URL добавлены
+		close(workerChan) // Закрываем канал задач, когда все URL добавлены
 	}()
 
 	return nil

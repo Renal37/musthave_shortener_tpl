@@ -33,4 +33,3 @@ func (m *MockStore) DeleteURLs(userID string, shortURL string, updateChan chan<-
 	args := m.Called(userID, shortURL, updateChan)
 	return args.Error(0)
 }
-

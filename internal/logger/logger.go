@@ -3,6 +3,7 @@ package logger
 import (
 	"go.uber.org/zap"
 )
+
 var Log *zap.SugaredLogger
 
 // Initialize инициализирует глобальный логгер с заданным уровнем логирования
