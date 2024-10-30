@@ -18,8 +18,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// RestAPI представляет собой структуру для REST API.
 type RestAPI struct {
-	Shortener *services.ShortenerService
+	Shortener *services.ShortenerService // Сервис для сокращения URL.
 }
 
 func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
