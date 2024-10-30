@@ -151,7 +151,6 @@ func (s *RestAPI) Ping(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "")
 }
 // GetUserURLs обрабатывает получение всех URL пользователя
-// GetUserURLs обрабатывает получение всех URL пользователя
 func (s *RestAPI) GetUserURLs(c *gin.Context) {
     authHeader := c.GetHeader("Authorization")
     if authHeader == "" {

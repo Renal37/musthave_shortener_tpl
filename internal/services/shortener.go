@@ -14,6 +14,7 @@ type Store interface {
 	PingStore() error
 	Create(originalURL, shortURL string) error
 	Get(shortID string, originalURL string) (string, error)
+	GetUserURLsByAuth(authHeader string) ([]ResponseBodyURLs, error)
 }
 
 // Repository определяет интерфейс для локального хранилища коротких URL.
@@ -47,15 +48,23 @@ func NewShortenerService(BaseURL string, storage Repository, db Store, dbDNSTurn
 	}
 }
 
-// GetUserURLs возвращает пустой список URL, так как метод GetUserURLsByAuth удален.
 func (s *ShortenerService) GetUserURLs(authHeader string) ([]ResponseBodyURLs, error) {
-	if authHeader == "" {
-		return nil, fmt.Errorf("missing auth header")
-	}
+    if authHeader == "" {
+        return nil, fmt.Errorf("missing auth header")
+    }
 
-	// Возвращаем пустой массив и nil ошибку, чтобы сохранить совместимость.
-	return []ResponseBodyURLs{}, nil
+    if s.dbDNSTurn {
+        urls, err := s.db.GetUserURLsByAuth(authHeader)
+        if err != nil {
+            return nil, err
+        }
+        return urls, nil
+    }
+
+    return []ResponseBodyURLs{}, nil
 }
+
+
 
 // GetExistURL возвращает существующий короткий URL, если оригинальный URL уже есть в базе данных.
 func (s *ShortenerService) GetExistURL(originalURL string, err error) (string, error) {
