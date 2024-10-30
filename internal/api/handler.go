@@ -151,19 +151,29 @@ func (s *RestAPI) Ping(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "")
 }
 // GetUserURLs обрабатывает получение всех URL пользователя
+// GetUserURLs обрабатывает получение всех URL пользователя
 func (s *RestAPI) GetUserURLs(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
+    authHeader := c.GetHeader("Authorization")
+    if authHeader == "" {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
-	// Получение URL-ов пользователя из сервиса
-	urls, err := s.StructService.GetUserURLs(authHeader)
-	if err != nil || len(urls) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "URLs not found"})
-		return
-	}
+    // Получение URL-ов пользователя из сервиса
+    urls, err := s.StructService.GetUserURLs(authHeader)
+    if err != nil {
+        // Обработка ошибки, если не удалось получить URL-адреса
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при получении URL"})
+        return
+    }
+    
+    if len(urls) == 0 {
+        // Если у пользователя нет URL, возвращаем 404
+        c.JSON(http.StatusNotFound, gin.H{"error": "URLs not found"})
+        return
+    }
 
-	c.JSON(http.StatusOK, urls)
+    // Успешный ответ с URL-адресами пользователя
+    c.JSON(http.StatusOK, urls)
 }
+
