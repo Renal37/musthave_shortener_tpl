@@ -100,8 +100,6 @@ func (s *RestAPI) ShortenURLJSON(c *gin.Context) {
 	}
 	c.Data(httpStatus, "application/json", respJSON)
 }
-
-// RedirectToOriginalURL перенаправляет на оригинальный URL по короткому идентификатору
 func (s *RestAPI) RedirectToOriginalURL(c *gin.Context) {
 	code := http.StatusTemporaryRedirect
 	shortID := c.Param("id")
