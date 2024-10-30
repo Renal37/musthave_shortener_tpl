@@ -6,7 +6,7 @@ import (
 )
 
 // Benchmark for the Set method
-func BenchmarkStorage_Set(b *testing.B) {
+func BenchmarkStorageSet(b *testing.B) {
     storage := NewStorage()
     for i := 0; i < b.N; i++ {
         // Используем Sprintf для корректного преобразования int в string
@@ -15,7 +15,7 @@ func BenchmarkStorage_Set(b *testing.B) {
 }
 
 // Benchmark for the Get method
-func BenchmarkStorage_Get(b *testing.B) {
+func BenchmarkStorageGet(b *testing.B) {
     storage := NewStorage()
     // Заполним хранилище 1000 значениями
     for i := 0; i < 1000; i++ {
@@ -30,7 +30,7 @@ func BenchmarkStorage_Get(b *testing.B) {
 }
 
 // Benchmark for the Get method for nonexistent keys
-func BenchmarkStorage_GetNonExistent(b *testing.B) {
+func BenchmarkStorageGetNonExistent(b *testing.B) {
     storage := NewStorage()
     // Заполним хранилище 1000 значениями
     for i := 0; i < 1000; i++ {
