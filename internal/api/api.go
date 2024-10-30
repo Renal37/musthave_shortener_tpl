@@ -20,7 +20,7 @@ import (
 
 // Определяем структуру RestAPI, которая будет хранить ссылку на ShortenerService
 type RestAPI struct {
-	StructService *services.ShortenerService
+	Shortener *services.ShortenerService
 }
 
 // Функция StartRestAPI запускает REST API сервер
@@ -35,7 +35,7 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB
 	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 	// Создаем новый экземпляр RestAPI с указанным ShortenerService
 	api := &RestAPI{
-		StructService: storageShortener,
+		Shortener: storageShortener,
 	}
 	// Устанавливаем режим работы Gin на ReleaseMode
 	gin.SetMode(gin.ReleaseMode)
