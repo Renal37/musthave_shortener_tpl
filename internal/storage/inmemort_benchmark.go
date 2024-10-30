@@ -1,45 +1,40 @@
 package storage
 
 import (
+    "fmt"
     "testing"
-	"fmt"
 )
 
-// Benchmark for the Set method
 func BenchmarkStorageSet(b *testing.B) {
     storage := NewStorage()
     for i := 0; i < b.N; i++ {
-        // Используем Sprintf для корректного преобразования int в string
         storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
     }
 }
 
-// Benchmark for the Get method
 func BenchmarkStorageGet(b *testing.B) {
     storage := NewStorage()
     // Заполним хранилище 1000 значениями
     for i := 0; i < 1000; i++ {
-        storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i)) // Используем Sprintf
-    }
-
-    b.ResetTimer() // Сбрасываем таймер, чтобы не включать время на заполнение
-
-    for i := 0; i < b.N; i++ {
-        storage.Get(fmt.Sprintf("key%d", i%1000)) // Получаем ключи по кругу
-    }
-}
-
-// Benchmark for the Get method for nonexistent keys
-func BenchmarkStorageGetNonExistent(b *testing.B) {
-    storage := NewStorage()
-    // Заполним хранилище 1000 значениями
-    for i := 0; i < 1000; i++ {
-        storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i)) // Используем Sprintf
+        storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
     }
 
     b.ResetTimer() // Сбрасываем таймер
 
     for i := 0; i < b.N; i++ {
-        storage.Get("nonexistent") // Запрашиваем несуществующий ключ
+        storage.Get(fmt.Sprintf("key%d", i%1000))
+    }
+}
+
+func BenchmarkStorageGetNonExistent(b *testing.B) {
+    storage := NewStorage()
+    for i := 0; i < 1000; i++ {
+        storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+    }
+
+    b.ResetTimer()
+
+    for i := 0; i < b.N; i++ {
+        storage.Get("nonexistent")
     }
 }
