@@ -124,6 +124,3 @@ func (s *ShortenerService) DeleteURLsRep(userID string, shorURLs []string) error
 	return nil
 }
 
-func (s *ShortenerService) GetDeletedFlagType() {
-
-}
