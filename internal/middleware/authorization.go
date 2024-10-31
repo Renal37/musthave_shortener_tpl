@@ -18,8 +18,8 @@ type Claims struct {
 }
 
 const (
-	TOKENEXP  = time.Hour * 24        // Время жизни токена
-	SECRETKEY = "supersecretkey"      // Секретный ключ для подписи токена
+	TOKENEXP  = time.Hour * 24   // Время жизни токена
+	SECRETKEY = "supersecretkey" // Секретный ключ для подписи токена
 )
 
 // AuthorizationMiddleware возвращает middleware для авторизации пользователей.
@@ -44,7 +44,7 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Set("userID", userInfo.ID) // Устанавливаем userID в контексте
-		c.Set("new", userInfo.New)    // Устанавливаем признак нового пользователя
+		c.Set("new", userInfo.New)   // Устанавливаем признак нового пользователя
 	}
 }
 

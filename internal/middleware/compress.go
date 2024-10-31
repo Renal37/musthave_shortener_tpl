@@ -11,7 +11,7 @@ import (
 
 // gzipWriter оборачивает ResponseWriter для поддержки сжатия.
 type gzipWriter struct {
-	gin.ResponseWriter // Встраивание gin.ResponseWriter
+	gin.ResponseWriter           // Встраивание gin.ResponseWriter
 	Writer             io.Writer // Сжатый вывод
 }
 
@@ -28,9 +28,9 @@ func CompressMiddleware() gin.HandlerFunc {
 			c.Request.Header.Get("Content-Type") == "text/html" {
 
 			if strings.Contains(c.Request.Header.Get("Accept-Encoding"), "gzip") {
-				compressWriter := gzip.NewWriter(c.Writer) // Создаем новый Gzip-Writer
-				defer compressWriter.Close() // Закрываем writer по завершению
-				c.Header("Content-Encoding", "gzip") // Указываем, что ответ сжат
+				compressWriter := gzip.NewWriter(c.Writer)       // Создаем новый Gzip-Writer
+				defer compressWriter.Close()                     // Закрываем writer по завершению
+				c.Header("Content-Encoding", "gzip")             // Указываем, что ответ сжат
 				c.Writer = &gzipWriter{c.Writer, compressWriter} // Оборачиваем ResponseWriter
 			}
 		}
@@ -51,7 +51,7 @@ func CompressMiddleware() gin.HandlerFunc {
 			}
 
 			c.Request.Body = io.NopCloser(bytes.NewReader(body)) // Заменяем тело запроса
-			c.Request.ContentLength = int64(len(body)) // Устанавливаем новую длину тела запроса
+			c.Request.ContentLength = int64(len(body))           // Устанавливаем новую длину тела запроса
 		}
 		c.Next() // Переход к следующему обработчику
 	}

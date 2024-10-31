@@ -31,9 +31,9 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 	if err != nil {
 		return err // Возвращаем ошибку, если не удалось открыть файл
 	}
-	defer file.Close() // Закрываем файл по завершении
+	defer file.Close()                  // Закрываем файл по завершении
 	newDecoder := json.NewDecoder(file) // Создаем новый декодер JSON
-	maxUUID := 0 // Переменная для отслеживания максимального UUID
+	maxUUID := 0                        // Переменная для отслеживания максимального UUID
 
 	// Читаем данные из файла
 	for {
@@ -46,7 +46,7 @@ func FillFromStorage(storageInstance *storage.Storage, filePath string) error {
 				break // Прерываем цикл, если произошла ошибка
 			}
 		}
-		maxUUID += 1 // Увеличиваем счетчик UUID
+		maxUUID += 1                                           // Увеличиваем счетчик UUID
 		storageInstance.Set(event.OriginalURL, event.ShortURL) // Сохраняем данные в хранилище
 	}
 	return nil
@@ -59,7 +59,7 @@ func Set(storageInstance *storage.Storage, filePath string) error {
 		return err // Возвращаем ошибку, если не удалось открыть файл
 	}
 	defer file.Close() // Закрываем файл по завершении
-	maxUUID := 0 // Переменная для отслеживания максимального UUID
+	maxUUID := 0       // Переменная для отслеживания максимального UUID
 
 	// Сохраняем данные из хранилища в файл
 	for shortURL, originalURL := range storageInstance.URLs {
@@ -69,7 +69,7 @@ func Set(storageInstance *storage.Storage, filePath string) error {
 			shortURL,
 			originalURL,
 		}
-		writer := bufio.NewWriter(file) // Создаем буферизованный писатель
+		writer := bufio.NewWriter(file)           // Создаем буферизованный писатель
 		err = writeEvent(&ShortCollector, writer) // Записываем событие в файл
 	}
 	return err
