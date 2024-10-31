@@ -10,12 +10,13 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 )
 
+// App представляет собой структуру приложения, содержащую хранилище и конфигурацию.
 type App struct {
-	storageInstance *storage.Storage
-	config          *config.Config
+	storageInstance *storage.Storage // Указатель на хранилище
+	config          *config.Config   // Указатель на конфигурацию
 }
 
-// NewApp создает новый экземпляр приложения с заданным хранилищем и конфигурацией
+// NewApp создает новый экземпляр приложения с заданным хранилищем и конфигурацией.
 func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 	return &App{
 		storageInstance: storageInstance,
@@ -23,7 +24,7 @@ func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 	}
 }
 
-// Start запускает приложение: загружает данные из файла в хранилище и запускает REST API
+// Start запускает приложение: загружает данные из файла в хранилище и запускает REST API.
 func (a *App) Start() {
 	// Инициализируем базу данных
 	db, err := repository.InitDatabase(a.config.DBPath)
@@ -51,11 +52,13 @@ func (a *App) Start() {
 		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
 	}
 }
+
+// UseDatabase возвращает true, если приложение использует базу данных.
 func (a *App) UseDatabase() bool {
 	return a.config.DBPath == ""
 }
 
-// Stop останавливает приложение: сохраняет данные из хранилища в файл
+// Stop останавливает приложение: сохраняет данные из хранилища в файл.
 func (a *App) Stop() {
 	// Сохраняем данные из хранилища в файл
 	if a.UseDatabase() {

@@ -10,10 +10,13 @@ import (
 	"time"
 )
 
+// StoreDB представляет хранилище для взаимодействия с базой данных URL
 type StoreDB struct {
 	db *sql.DB
 }
 
+// InitDatabase инициализирует соединение с базой данных по предоставленному пути DatabasePath,
+// создаёт таблицы при необходимости и возвращает структуру StoreDB.
 func InitDatabase(DatabasePath string) (*StoreDB, error) {
 	db, err := sql.Open("pgx", DatabasePath)
 	if err != nil {
@@ -26,13 +29,14 @@ func InitDatabase(DatabasePath string) (*StoreDB, error) {
 	if DatabasePath != "" {
 		err = createTable(db)
 		if err != nil {
-			return nil, fmt.Errorf("error creae table db: %w", err)
+			return nil, fmt.Errorf("error create table db: %w", err)
 		}
 	}
 
 	return storeDB, nil
 }
 
+// Create добавляет оригинальный URL и его сокращённую версию в базу данных, связывая их с заданным UserID.
 func (s *StoreDB) Create(originalURL, shortURL, UserID string) error {
 	query := `
         INSERT INTO urls (short_id, original_url, userID) 
@@ -45,6 +49,7 @@ func (s *StoreDB) Create(originalURL, shortURL, UserID string) error {
 	return nil
 }
 
+// createTable создаёт таблицу для хранения URL, если она не существует, и добавляет индекс для оригинальных URL.
 func createTable(db *sql.DB) error {
 	query := `CREATE TABLE IF NOT EXISTS urls (
 		id SERIAL PRIMARY KEY,
@@ -69,6 +74,7 @@ func createTable(db *sql.DB) error {
 	return nil
 }
 
+// GetFull получает все URL-адреса, созданные пользователем, по заданному userID и возвращает их со статусом удаления.
 func (s *StoreDB) GetFull(userID string, BaseURL string) ([]map[string]string, error) {
 	query := `SELECT short_id, original_url, deletedFlag FROM urls WHERE userID = $1`
 	rows, err := s.db.Query(query, userID)
@@ -102,6 +108,7 @@ func (s *StoreDB) GetFull(userID string, BaseURL string) ([]map[string]string, e
 	return urls, nil
 }
 
+// DeleteURLs помечает URL, соответствующий userID и shortURL, как удалённый, используя канал updateChan для передачи короткого URL.
 func (s *StoreDB) DeleteURLs(userID string, shortURL string, updateChan chan<- string) error {
 	query := `
 		UPDATE urls
@@ -116,6 +123,8 @@ func (s *StoreDB) DeleteURLs(userID string, shortURL string, updateChan chan<- s
 	return nil
 }
 
+// Get возвращает оригинальный URL по его сокращённой версии или, если указано, наоборот.
+// Если URL был удалён, возвращает статус 410 Gone.
 func (s *StoreDB) Get(shortURL string, originalURL string) (string, error) {
 	field1 := "original_url"
 	field2 := "short_id"
@@ -149,6 +158,7 @@ func (s *StoreDB) Get(shortURL string, originalURL string) (string, error) {
 	return answer, err
 }
 
+// PingStore проверяет соединение с базой данных, возвращая ошибку, если база данных недоступна.
 func (s *StoreDB) PingStore() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
