@@ -19,7 +19,7 @@ func ExampleStartRestAPI() {
 	db := &repository.StoreDB{}
 
 	// Запуск API на тестовом адресе
-	err := StartRestAPI(":8080", "http://example.com", "info", db, false, storage)
+	err := StartRestAPI(":8080", "http://localhost:8080", "info", db, false, storage)
 	if err != nil {
 		fmt.Println("Ошибка запуска API:", err)
 		return
