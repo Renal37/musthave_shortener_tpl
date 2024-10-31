@@ -18,11 +18,13 @@ type Claims struct {
 }
 
 const (
-	TOKENEXP  = time.Hour * 24   // Время жизни токена
+	TOKENEXP  = time.Hour * 24   // Время жизни токена (24 часа)
 	SECRETKEY = "supersecretkey" // Секретный ключ для подписи токена
 )
 
 // AuthorizationMiddleware возвращает middleware для авторизации пользователей.
+// Он проверяет наличие JWT-токена в cookie и устанавливает идентификатор пользователя в контексте.
+// Если токен отсутствует или недействителен, возвращается статус 401 Unauthorized.
 func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем информацию о пользователе из cookie
@@ -49,6 +51,8 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 }
 
 // getUserIDFromCookie получает ID пользователя из cookie и, при необходимости, создает новый токен.
+// Если токен отсутствует, создается новый JWT-токен, который сохраняется в cookie.
+// Возвращает указатель на объект User и ошибку, если таковая имеется.
 func getUserIDFromCookie(c *gin.Context) (*user.User, error) {
 	token, err := c.Cookie("userID") // Получаем токен из cookie
 	newToken := false
@@ -70,6 +74,7 @@ func getUserIDFromCookie(c *gin.Context) (*user.User, error) {
 }
 
 // BuildJWTString создает и возвращает новый JWT-токен.
+// Возвращает строку токена и ошибку, если таковая имеется.
 func BuildJWTString() (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -88,6 +93,7 @@ func BuildJWTString() (string, error) {
 }
 
 // GetUserID извлекает ID пользователя из JWT-токена.
+// Принимает строку токена и возвращает ID пользователя и ошибку, если таковая имеется.
 func GetUserID(tokenString string) (string, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,
