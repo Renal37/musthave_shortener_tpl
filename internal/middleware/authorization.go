@@ -1,3 +1,14 @@
+/*
+Package middleware предоставляет промежуточное ПО для авторизации пользователей с использованием JWT токенов.
+Он включает функции для создания, разбора и проверки JWT токенов, а также обработчик промежуточного ПО для Gin,
+который проверяет авторизацию пользователей на основе JWT.
+
+Этот пакет определяет следующие ключевые компоненты:
+- Claims: Структура пользовательских утверждений для JWT токенов.
+- AuthorizationMiddleware: Функция промежуточного ПО для авторизации пользователей на основе JWT cookie.
+- Функции для обработки создания и разбора JWT, включая получение ID пользователя из cookie.
+*/
+
 package middleware
 
 import (
@@ -11,28 +22,27 @@ import (
 	"github.com/google/uuid"
 )
 
-// Claims описывает данные, которые будут храниться в JWT.
+// Claims представляет структуру утверждений JWT.
 type Claims struct {
-	jwt.RegisteredClaims
-	UserID string // ID пользователя
+	jwt.RegisteredClaims // Стандартные утверждения для JWT
+	UserID string         // ID пользователя, связанный с токеном
 }
 
-const (
-	TOKENEXP  = time.Hour * 24   // Время жизни токена (24 часа)
-	SECRETKEY = "supersecretkey" // Секретный ключ для подписи токена
-)
+// TOKENEXP определяет время истечения токена (24 часа).
+const TOKENEXP = time.Hour * 24
 
-// AuthorizationMiddleware возвращает middleware для авторизации пользователей.
-// Он проверяет наличие JWT-токена в cookie и устанавливает идентификатор пользователя в контексте.
-// Если токен отсутствует или недействителен, возвращается статус 401 Unauthorized.
+// SECRETKEY — секретный ключ, используемый для подписи JWT токенов.
+const SECRETKEY = "supersecretkey"
+
+// AuthorizationMiddleware возвращает промежуточное ПО Gin, которое проверяет авторизацию пользователя.
+// Оно извлекает ID пользователя из cookie и устанавливает его в контексте.
+// Если пользователь не авторизован, оно отвечает кодом состояния 401.
 func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Получаем информацию о пользователе из cookie
 		userInfo, err := getUserIDFromCookie(c)
 		if err != nil {
 			code := http.StatusUnauthorized
 			contentType := c.Request.Header.Get("Content-Type")
-			// Обрабатываем ответ в зависимости от типа контента
 			if contentType == "application/json" {
 				c.Header("Content-Type", "application/json")
 				c.JSON(code, gin.H{
@@ -42,74 +52,73 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 			} else {
 				c.String(code, fmt.Sprintf("Unauthorized %s", err))
 			}
-			c.Abort() // Прерываем выполнение следующего обработчика
+			c.Abort() // Прерывание обработки запроса
 			return
 		}
-		c.Set("userID", userInfo.ID) // Устанавливаем userID в контексте
-		c.Set("new", userInfo.New)   // Устанавливаем признак нового пользователя
+		c.Set("userID", userInfo.ID) // Установка ID пользователя в контексте
+		c.Set("new", userInfo.New)    // Установка флага нового пользователя в контексте
 	}
 }
 
-// getUserIDFromCookie получает ID пользователя из cookie и, при необходимости, создает новый токен.
-// Если токен отсутствует, создается новый JWT-токен, который сохраняется в cookie.
-// Возвращает указатель на объект User и ошибку, если таковая имеется.
+// getUserIDFromCookie извлекает ID пользователя из cookie.
+// Если cookie не существует, он создает новый JWT токен и устанавливает его в cookie.
+// Возвращает информацию о пользователе и любую ошибку, возникшую в процессе.
 func getUserIDFromCookie(c *gin.Context) (*user.User, error) {
-	token, err := c.Cookie("userID") // Получаем токен из cookie
+	token, err := c.Cookie("userID")
 	newToken := false
 	if err != nil {
-		token, err = BuildJWTString() // Создаем новый токен, если он отсутствует
+		token, err = BuildJWTString() // Создание нового токена
 		newToken = true
 		if err != nil {
 			return nil, err
 		}
-		c.SetCookie("userID", token, 3600, "/", "localhost", false, true) // Устанавливаем новый токен в cookie
+		c.SetCookie("userID", token, 3600, "/", "localhost", false, true) // Установка cookie
 	}
-	userID, err := GetUserID(token) // Извлекаем ID пользователя из токена
+	userID, err := GetUserID(token) // Извлечение ID пользователя из токена
 	if err != nil {
 		return nil, err
 	}
-	userInfo := user.NewUser(userID, newToken) // Создаем объект пользователя
+	userInfo := user.NewUser(userID, newToken) // Создание нового экземпляра пользователя
 
 	return userInfo, nil
 }
 
-// BuildJWTString создает и возвращает новый JWT-токен.
-// Возвращает строку токена и ошибку, если таковая имеется.
+// BuildJWTString создает новый JWT токен с заданным временем истечения и уникальным ID пользователя.
+// Возвращает подписанную строку токена и любую ошибку, возникшую в процессе.
 func BuildJWTString() (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKENEXP)), // Устанавливаем время истечения токена
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TOKENEXP)), // Установка времени истечения
 		},
-		UserID: uuid.New().String(), // Генерируем новый UUID для UserID
+		UserID: uuid.New().String(), // Присвоение нового ID пользователя
 	})
 
-	// Создаем строку токена
-	tokenString, err := token.SignedString([]byte(SECRETKEY))
+	tokenString, err := token.SignedString([]byte(SECRETKEY)) // Подпись токена
 	if err != nil {
 		return "", err
 	}
 
-	return tokenString, nil // Возвращаем строку токена
+	return tokenString, nil // Возвращение строки токена
 }
 
-// GetUserID извлекает ID пользователя из JWT-токена.
-// Принимает строку токена и возвращает ID пользователя и ошибку, если таковая имеется.
+// GetUserID извлекает ID пользователя из переданной строки JWT токена.
+// Возвращает ID пользователя и любую ошибку, возникшую при разборе.
 func GetUserID(tokenString string) (string, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,
 		func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+				return nil, fmt.Errorf("неожиданный метод подписи: %v", t.Header["alg"])
 			}
-			return []byte(SECRETKEY), nil // Возвращаем секретный ключ
+			return []byte(SECRETKEY), nil // Возвращение секретного ключа для проверки
 		})
 	if err != nil {
-		return "", fmt.Errorf("token is not valid") // Проверка на валидность токена
+		return "", fmt.Errorf("токен недействителен: %v", err)
 	}
 
 	if !token.Valid {
-		return "", fmt.Errorf("token is not valid") // Токен недействителен
+		return "", fmt.Errorf("токен недействителен")
 	}
 
-	return claims.UserID, nil // Возвращаем ID пользователя
+	return claims.UserID, nil // Возвращение извлеченного ID пользователя
 }

@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
