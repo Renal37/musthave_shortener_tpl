@@ -24,8 +24,8 @@ import (
 
 // Claims представляет структуру утверждений JWT.
 type Claims struct {
-	jwt.RegisteredClaims // Стандартные утверждения для JWT
-	UserID string         // ID пользователя, связанный с токеном
+	jwt.RegisteredClaims        // Стандартные утверждения для JWT
+	UserID               string // ID пользователя, связанный с токеном
 }
 
 // TOKENEXP определяет время истечения токена (24 часа).
@@ -56,7 +56,7 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Set("userID", userInfo.ID) // Установка ID пользователя в контексте
-		c.Set("new", userInfo.New)    // Установка флага нового пользователя в контексте
+		c.Set("new", userInfo.New)   // Установка флага нового пользователя в контексте
 	}
 }
 
