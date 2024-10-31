@@ -1,4 +1,3 @@
-// example_test.go
 package api
 
 import (
