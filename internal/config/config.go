@@ -2,19 +2,18 @@ package config
 
 import (
 	"flag"
-	"sync"
-
 	"github.com/caarlos0/env/v6"
+	"sync"
 )
 
 // Config представляет собой структуру для хранения конфигурационных параметров приложения.
 type Config struct {
 	ServerAddr  string `env:"SERVER_ADDRESS"`    // Адрес и порт сервера
 	BaseURL     string `env:"BASE_URL"`          // Базовый URL
-	LogLevel    string `env:"LOG_LEVEL"`         // Уровень логирования
+	LogLevel    string `env:"FLAG_LOG_LEVEL"`    // Уровень логирования
 	FilePath    string `env:"FILE_STORAGE_PATH"` // Путь к файлу для хранения
 	DBPath      string `env:"DB_PATH"`           // Путь к базе данных
-	EnablePprof bool   `env:"ENABLE_PPROF"`      // Включение профайлинга
+	EnablePprof string `env:"ENABLE_PPROF"`      // Путь к pprof
 }
 
 var once sync.Once
@@ -27,22 +26,23 @@ func InitConfig() *Config {
 		LogLevel:    "info",                  // Значение по умолчанию для уровня логирования
 		FilePath:    "short-url-db.json",     // Значение по умолчанию для пути к файлу
 		DBPath:      "",                      // Значение по умолчанию для пути к базе данных
-		EnablePprof: false,                   // Значение по умолчанию для включения профайлинга
+		EnablePprof: "false",                 // Значение по умолчанию для пути к pprof
 	}
 
 	// Определяем флаги командной строки
 	once.Do(func() {
 		flag.StringVar(&config.ServerAddr, "a", config.ServerAddr, "address and port to run api")
-		flag.StringVar(&config.BaseURL, "-b", config.BaseURL, "base URL")
-		flag.StringVar(&config.LogLevel, "-c", config.LogLevel, "log level")
-		flag.StringVar(&config.FilePath, "-f", config.FilePath, "path to file for storage")
-		flag.StringVar(&config.DBPath, "-d", config.DBPath, "path to database")
-		flag.BoolVar(&config.EnablePprof, "e", config.EnablePprof, "enable profiling")
+		flag.StringVar(&config.BaseURL, "b", config.BaseURL, "base URL")
+		flag.StringVar(&config.LogLevel, "c", config.LogLevel, "log level")
+		flag.StringVar(&config.FilePath, "f", config.FilePath, "path to file for storage")
+		flag.StringVar(&config.DBPath, "d", config.DBPath, "path to database")
+		flag.StringVar(&config.EnablePprof, "e", config.EnablePprof, "pprof")
 		flag.Parse() // Парсим флаги командной строки
 	})
 
 	// Загружаем параметры из переменных окружения
-	if err := env.Parse(config); err != nil {
+	err := env.Parse(config)
+	if err != nil {
 		panic(err) // Завершаем программу, если произошла ошибка
 	}
 

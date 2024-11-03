@@ -14,14 +14,10 @@ func main() {
 	addrConfig := config.InitConfig()
 	storageInstance := storage.NewStorage()
 	appInstance := app.NewApp(storageInstance, addrConfig)
-
-	// Запуск pprof сервера, если флаг включен
-	if addrConfig.EnablePprof {
-		go func() {
-			log.Println("Starting pprof server on :6060")
-			log.Println(http.ListenAndServe("localhost:6060", nil))
-		}()
-	}
+	// Запуск pprof сервера на порту 6060
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	appInstance.Start()
 	appInstance.Stop()
