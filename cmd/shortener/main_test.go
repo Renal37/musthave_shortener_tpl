@@ -50,11 +50,7 @@ func TestServer(t *testing.T) {
 	appInstance := app.NewApp(storageInstance, addrConfig)
 
 	// Запускаем приложение в горутине
-	go func() {
-		if err := appInstance.Start(); err != nil {
-			t.Fatalf("Не удалось запустить приложение: %v", err)
-		}
-	}()
+
 
 	// Делаем HTTP-запрос к серверу
 	req, err := http.NewRequest(http.MethodGet, addrConfig.ServerAddr+"/", nil)
