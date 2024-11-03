@@ -54,8 +54,8 @@ func (m *MockRepository) Get(shortID string) (string, bool) {
 
 // Тест для метода Set
 func TestShortenerService_Set(t *testing.T) {
-	mockRepo := new(MockRepository)  // Создаем мок для Repository
-	mockStore := new(MockStore)      // Создаем мок для Store
+	mockRepo := new(MockRepository) // Создаем мок для Repository
+	mockStore := new(MockStore)     // Создаем мок для Store
 
 	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
 
@@ -70,8 +70,8 @@ func TestShortenerService_Set(t *testing.T) {
 
 // Тест для метода Get (проверка через кэш и БД)
 func TestShortenerService_Get(t *testing.T) {
-	mockRepo := new(MockRepository)  // Создаем мок для Repository
-	mockStore := new(MockStore)      // Создаем мок для Store
+	mockRepo := new(MockRepository) // Создаем мок для Repository
+	mockStore := new(MockStore)     // Создаем мок для Store
 
 	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, false)
 
