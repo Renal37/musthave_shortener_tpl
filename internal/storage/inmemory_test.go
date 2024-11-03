@@ -2,7 +2,7 @@ package storage
 
 import (
 	"testing"
-
+    "fmt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,44 +42,37 @@ func TestGet_NonExistentKey(t *testing.T) {
 	assert.Empty(t, retrievedValue)           // Проверяем, что возвращаемое значение пустое
 }
 
-// package storage
+func BenchmarkStorageSet(b *testing.B) {
+	storage := NewStorage()
+	for i := 0; i < b.N; i++ {
+		storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+	}
+}
 
-// import (
-// 	"fmt"
-// 	"testing"
-// )
+func BenchmarkStorageGet(b *testing.B) {
+	storage := NewStorage()
+	// Заполним хранилище 1000 значениями
+	for i := 0; i < 1000; i++ {
+		storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+	}
 
-// func BenchmarkStorageSet(b *testing.B) {
-// 	storage := NewStorage()
-// 	for i := 0; i < b.N; i++ {
-// 		storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
-// 	}
-// }
+	b.ResetTimer() // Сбрасываем таймер
 
-// func BenchmarkStorageGet(b *testing.B) {
-// 	storage := NewStorage()
-// 	// Заполним хранилище 1000 значениями
-// 	for i := 0; i < 1000; i++ {
-// 		storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
-// 	}
+	for i := 0; i < b.N; i++ {
+		storage.Get(fmt.Sprintf("key%d", i%1000))
+	}
+}
 
-// 	b.ResetTimer() // Сбрасываем таймер
+func BenchmarkStorageGetNonExistent(b *testing.B) {
+	storage := NewStorage()
+	for i := 0; i < 1000; i++ {
+		storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
+	}
 
-// 	for i := 0; i < b.N; i++ {
-// 		storage.Get(fmt.Sprintf("key%d", i%1000))
-// 	}
-// }
+	b.ResetTimer()
 
-// func BenchmarkStorageGetNonExistent(b *testing.B) {
-// 	storage := NewStorage()
-// 	for i := 0; i < 1000; i++ {
-// 		storage.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
-// 	}
-
-// 	b.ResetTimer()
-
-// 	for i := 0; i < b.N; i++ {
-// 		storage.Get("nonexistent")
-// 	}
-// }
+	for i := 0; i < b.N; i++ {
+		storage.Get("nonexistent")
+	}
+}
 
