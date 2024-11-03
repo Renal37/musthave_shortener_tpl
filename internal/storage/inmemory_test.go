@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"testing"
-    "fmt"
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewStorage(t *testing.T) {
@@ -27,8 +27,8 @@ func TestSetAndGet(t *testing.T) {
 
 	// Проверяем, что значение корректно сохраняется
 	retrievedValue, exists := storage.Get(key)
-	assert.True(t, exists)                     // Проверяем, что ключ существует
-	assert.Equal(t, value, retrievedValue)     // Проверяем, что возвращаемое значение совпадает с сохраненным
+	assert.True(t, exists)                 // Проверяем, что ключ существует
+	assert.Equal(t, value, retrievedValue) // Проверяем, что возвращаемое значение совпадает с сохраненным
 }
 
 func TestGet_NonExistentKey(t *testing.T) {
@@ -38,8 +38,8 @@ func TestGet_NonExistentKey(t *testing.T) {
 	// Проверяем, что получение несуществующего ключа возвращает false
 	retrievedValue, exists := storage.Get("nonexistent")
 
-	assert.False(t, exists)                  // Проверяем, что ключ не существует
-	assert.Empty(t, retrievedValue)           // Проверяем, что возвращаемое значение пустое
+	assert.False(t, exists)         // Проверяем, что ключ не существует
+	assert.Empty(t, retrievedValue) // Проверяем, что возвращаемое значение пустое
 }
 
 func BenchmarkStorageSet(b *testing.B) {
@@ -75,4 +75,3 @@ func BenchmarkStorageGetNonExistent(b *testing.B) {
 		storage.Get("nonexistent")
 	}
 }
-
