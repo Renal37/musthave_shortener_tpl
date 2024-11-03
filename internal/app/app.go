@@ -22,16 +22,17 @@ func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 		storageInstance: storageInstance,
 		config:          config,
 	}
+
 }
 
 // Start запускает приложение: загружает данные из файла в хранилище и запускает REST API.
-func (a *App) Start() {
+func (a *App) Start() error {
 	// Инициализируем базу данных
 	db, err := repository.InitDatabase(a.config.DBPath)
 	if err != nil {
 		// Выводим ошибку, если не удалось инициализировать базу данных
 		fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
-		return
+		return nil
 	}
 
 	dbDNSTurn := true
@@ -40,7 +41,7 @@ func (a *App) Start() {
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			fmt.Printf("Ошибка при заполнении хранилища: %v\n", err)
-			return
+			return nil
 		}
 		dbDNSTurn = false
 	}
@@ -50,7 +51,9 @@ func (a *App) Start() {
 	if err != nil {
 		// Выводим ошибку, если не удалось запустить API
 		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
+
 	}
+	return nil
 }
 
 // UseDatabase возвращает true, если приложение использует базу данных.

@@ -9,13 +9,7 @@ import (
 
 func TestInitConfig_Defaults(t *testing.T) {
 	// Создаем новый экземпляр Config с начальными значениями
-	config := &Config{
-		ServerAddr: "localhost:8080",
-		BaseURL:    "http://localhost:8080",
-		LogLevel:   "info",
-		FilePath:   "short-url-db.json",
-		DBPath:     "",
-	}
+	config := InitConfig()
 
 	assert.Equal(t, "localhost:8080", config.ServerAddr)
 	assert.Equal(t, "http://localhost:8080", config.BaseURL)
@@ -30,14 +24,14 @@ func TestInitConfig_WithEnvVars(t *testing.T) {
 	oldBaseURL := os.Getenv("BASE_URL")
 	oldLogLevel := os.Getenv("FLAG_LOG_LEVEL")
 	oldFilePath := os.Getenv("FILE_STORAGE_PATH")
-	oldDBPath := os.Getenv("db")
+	oldDBPath := os.Getenv("DB_PATH")
 
 	// Устанавливаем переменные окружения для проверки их приоритета
 	os.Setenv("SERVER_ADDRESS", "127.0.0.1:9090")
 	os.Setenv("BASE_URL", "http://127.0.0.1:9090")
 	os.Setenv("FLAG_LOG_LEVEL", "debug")
 	os.Setenv("FILE_STORAGE_PATH", "custom-file.json")
-	os.Setenv("db", "postgres://user:password@localhost:5432/mydb")
+	os.Setenv("DB_PATH", "postgres://user:password@localhost:5432/mydb")
 
 	// Создаем новый экземпляр Config и парсим окружение
 	config := InitConfig()
@@ -70,8 +64,8 @@ func TestInitConfig_WithEnvVars(t *testing.T) {
 		os.Unsetenv("FILE_STORAGE_PATH")
 	}
 	if oldDBPath != "" {
-		os.Setenv("db", oldDBPath)
+		os.Setenv("DB_PATH", oldDBPath)
 	} else {
-		os.Unsetenv("db")
+		os.Unsetenv("DB_PATH")
 	}
 }

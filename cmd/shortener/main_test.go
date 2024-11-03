@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"flag"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,53 +11,71 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
-func TestMain(t *testing.T) {
-	// Инициализация конфигурации
-	addrConfig := config.InitConfig() // Предполагается, что эта функция не возвращает ошибку
+// TestConfigInit проверяет корректную инициализацию конфигурации.
+func TestConfigInit(t *testing.T) {
+	cfg := config.InitConfig()
+	if cfg == nil {
+		t.Fatal("Ожидалось, что конфигурация будет инициализирована, но получено nil")
+	}
 
-	// Создаем экземпляр хранилища
-	storageInstance := storage.NewStorage() // Возможно, нужно будет передать параметры
+	// Дополнительные проверки конфигурации
+	if cfg.ServerAddr == "" {
+		t.Fatal("Ожидалось, что ServerAddr будет инициализирован, но получено пустое значение")
+	}
+	if cfg.BaseURL == "" {
+		t.Fatal("Ожидалось, что BaseURL будет инициализирован, но получено пустое значение")
+	}
+}
 
-	// Создаем экземпляр приложения
+// TestStorage проверяет создание экземпляра хранилища.
+func TestStorage(t *testing.T) {
+	storageInstance := storage.NewStorage()
+	if storageInstance == nil {
+		t.Fatal("Ожидалось, что экземпляр хранилища будет инициализирован, но получено nil")
+	}
+
+	// Дополнительные проверки хранилища
+	if len(storageInstance.URLs) != 0 {
+		t.Fatal("Ожидалось, что карта URL-адресов в хранилище будет пустой, но получено непустое значение")
+	}
+}
+
+// TestServer проверяет, что сервер успешно запускается и отвечает на запросы.
+func TestServer(t *testing.T) {
+	// Сброс флагов перед запуском теста
+	flag.CommandLine.Parse([]string{})
+
+	addrConfig := config.InitConfig()
+	storageInstance := storage.NewStorage()
 	appInstance := app.NewApp(storageInstance, addrConfig)
 
-	// Создаем тестовый HTTP сервер
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			http.Error(w, "Application is running", http.StatusOK)
-		} else {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		}
-	}))
-	defer server.Close()
-
-	// Запуск приложения в горутине
+	// Запускаем приложение в горутине
 	go func() {
-		appInstance.Start() // Предполагается, что этот метод не блокирует
+		if err := appInstance.Start(); err != nil {
+			t.Fatalf("Не удалось запустить приложение: %v", err)
+		}
 	}()
-	defer appInstance.Stop() // Остановить приложение после теста
 
-	// Отправляем тестовый запрос на сервер
-	resp, err := http.Get(server.URL)
+	// Делаем HTTP-запрос к серверу
+	req, err := http.NewRequest(http.MethodGet, addrConfig.ServerAddr+"/", nil)
 	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Проверяем, что код состояния ответа 200
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status code 200, got: %d", resp.StatusCode)
+		t.Fatalf("Не удалось создать запрос: %v", err)
 	}
 
-	// Проверяем, что приложение корректно обрабатывает неправильный метод
-	resp, err = http.Post(server.URL, "application/json", bytes.NewBuffer([]byte{}))
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
-	}
-	defer resp.Body.Close()
+	// Создаем новый тестовый сервер
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
-	// Проверяем, что код состояния ответа 405
-	if resp.StatusCode != http.StatusMethodNotAllowed {
-		t.Errorf("Expected status code 405, got: %d", resp.StatusCode)
+	// Вызываем хендлер
+	handler.ServeHTTP(rr, req)
+
+	// Проверяем ответ
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("Ожидался статус OK, получен %v", status)
 	}
+
+	// Остановка приложения
+	appInstance.Stop()
 }

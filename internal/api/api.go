@@ -1,25 +1,25 @@
 package api
 
 import (
-    "context"
-    "log"
-    "net/http"
-    "os"
-    "os/signal"
-    "time"
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
-    "github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
-    "github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
-    "github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-    "github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-    "github.com/Renal37/musthave_shortener_tpl.git/repository"
-    "github.com/gin-gonic/gin"
-    "go.uber.org/zap"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/Renal37/musthave_shortener_tpl.git/repository"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // RestAPI представляет собой структуру для REST API.
 type RestAPI struct {
-    Shortener *services.ShortenerService // Сервис для сокращения URL.
+	Shortener *services.ShortenerService // Сервис для сокращения URL.
 }
 
 // StartRestAPI запускает HTTP-сервер REST API для обработки запросов сокращения URL.
@@ -51,53 +51,54 @@ type RestAPI struct {
 // BUG(Автор): Текущее логирование ограничено уровнем info; более детализированные уровни требуют дальнейшей настройки.
 // BUG(Автор): В конфигурации сервера может отсутствовать поддержка HTTPS.
 func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
-    if err := logger.Initialize(LogLevel); err != nil {
-        return err
-    }
-    logger.Log.Info("Running server", zap.String("address", ServerAddr))
-    storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 
-    api := &RestAPI{
-        Shortener: storageShortener,
-    }
+	if err := logger.Initialize(LogLevel); err != nil {
+		return err
+	}
+	logger.Log.Info("Running server", zap.String("address", ServerAddr))
+	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 
-    gin.SetMode(gin.ReleaseMode)
-    r := gin.Default()
+	api := &RestAPI{
+		Shortener: storageShortener,
+	}
 
-    r.Use(
-        gin.Recovery(),
-        middleware.LoggerMiddleware(logger.Log),
-        middleware.CompressMiddleware(),
-        middleware.AuthorizationMiddleware(),
-    )
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.Default()
 
-    api.setRoutes(r) // Настройка маршрутов API
+	r.Use(
+		gin.Recovery(),
+		middleware.LoggerMiddleware(logger.Log),
+		middleware.CompressMiddleware(),
+		middleware.AuthorizationMiddleware(),
+	)
 
-    return startServer(ServerAddr, r)
+	api.setRoutes(r) // Настройка маршрутов API
+
+	return startServer(ServerAddr, r)
 }
 
 func startServer(ServerAddr string, r *gin.Engine) error {
-    server := &http.Server{
-        Addr:    ServerAddr,
-        Handler: r,
-    }
+	server := &http.Server{
+		Addr:    ServerAddr,
+		Handler: r,
+	}
 
-    quit := make(chan os.Signal, 1)
-    signal.Notify(quit, os.Interrupt)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
 
-    go func() {
-        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            log.Fatalf("Ошибка при запуске сервера: %v", err)
-        }
-    }()
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Ошибка при запуске сервера: %v", err)
+		}
+	}()
 
-    <-quit
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer cancel()
+	<-quit
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-    if err := server.Shutdown(ctx); err != nil {
-        log.Fatalf("Ошибка при остановке сервера: %v\n", err)
-    }
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Ошибка при остановке сервера: %v\n", err)
+	}
 
-    return nil
+	return nil
 }
