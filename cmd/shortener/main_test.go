@@ -51,7 +51,6 @@ func TestServer(t *testing.T) {
 
 	// Запускаем приложение в горутине
 
-
 	// Делаем HTTP-запрос к серверу
 	req, err := http.NewRequest(http.MethodGet, addrConfig.ServerAddr+"/", nil)
 	if err != nil {

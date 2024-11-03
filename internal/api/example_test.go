@@ -46,7 +46,6 @@ func RedirectToOriginalURLHandlers() {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 	handler := api.RestAPI{Shortener: storageShortener}
-
 	// Добавляем URL в хранилище
 	storageInstance.Set("test_id", "https://practicum.yandex.ru/")
 
