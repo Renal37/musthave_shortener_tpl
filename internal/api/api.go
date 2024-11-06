@@ -51,10 +51,10 @@ type RestAPI struct {
 // BUG(Автор): Текущее логирование ограничено уровнем info; более детализированные уровни требуют дальнейшей настройки.
 // BUG(Автор): В конфигурации сервера может отсутствовать поддержка HTTPS.
 func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
-
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
 	}
+
 	logger.Log.Info("Running server", zap.String("address", ServerAddr))
 	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 
@@ -72,10 +72,12 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 		middleware.AuthorizationMiddleware(),
 	)
 
-	api.setRoutes(r) // Настройка маршрутов API
+	api.SetRoutes(r)
 
+	// Мы ожидаем ошибку от startServer
 	return startServer(ServerAddr, r)
 }
+
 
 func startServer(ServerAddr string, r *gin.Engine) error {
 	server := &http.Server{
@@ -88,7 +90,7 @@ func startServer(ServerAddr string, r *gin.Engine) error {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Ошибка при запуске сервера: %v", err)
+			log.Printf("Ошибка при запуске сервера: %v", err) // Меняем на log.Printf
 		}
 	}()
 
@@ -97,8 +99,10 @@ func startServer(ServerAddr string, r *gin.Engine) error {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Ошибка при остановке сервера: %v\n", err)
+		log.Printf("Ошибка при остановке сервера: %v\n", err)
+		return err // Возвращаем ошибку
 	}
 
 	return nil
 }
+
