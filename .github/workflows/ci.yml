@@ -28,6 +28,22 @@ jobs:
       - name: Run tests with coverage
         run: go test -coverprofile=coverage.out ./...
 
+      - name: Calculate total coverage
+        id: coverage
+        run: |
+          go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%'
+
+      - name: Display total coverage
+        run: echo "Total test coverage: ${{ steps.coverage.outputs.result }}%"
+
+      - name: Calculate backend coverage
+        # Предположим, что у вас есть отдельная метрика для полной базы бекенда.
+        run: |
+          # Замените `full_backend_coverage` на ваш способ получения процента покрытия бекенда.
+          full_backend_coverage=80  # Пример: 80% общего покрытия бекенда
+          total_coverage=${{ steps.coverage.outputs.result }}
+          echo "Total coverage compared to full backend: $((total_coverage * 100 / full_backend_coverage))%"
+
       - name: Upload coverage to Coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
