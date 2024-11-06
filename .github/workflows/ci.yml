@@ -32,17 +32,17 @@ jobs:
         id: coverage
         run: |
           total_coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-          echo "TOTAL_COVERAGE=${total_coverage}" >> $GITHUB_ENV
+          echo "total_coverage=$total_coverage" >> $GITHUB_OUTPUT
 
       - name: Display total coverage
-        run: echo "Total test coverage - ${{ env.TOTAL_COVERAGE }}%"
+        run: echo "Total test coverage - ${{ steps.coverage.outputs.total_coverage }}%"
 
       - name: Calculate backend coverage
         run: |
           full_backend_coverage=80
-          total_coverage=${{ env.TOTAL_COVERAGE }}
-          coverage_percentage=$((total_coverage * 100 / full_backend_coverage))
-          echo "Total coverage compared to full backend: $coverage_percentage%"
+          total_coverage=${{ steps.coverage.outputs.total_coverage }}
+          coverage_percentage=$(echo "scale=2; $total_coverage * 100 / $full_backend_coverage" | bc)
+          echo "Total coverage compared to full backend: ${coverage_percentage}%"
 
       - name: Upload coverage to Coveralls
         env:
