@@ -75,6 +75,7 @@ func TestApp_Start_InitDBError(t *testing.T) {
 	// Проверяем, что приложение не вернуло ошибку (только логируется ошибка)
 	assert.NoError(t, err)
 }
+
 // Тест для метода Stop
 func TestApp_Stop(t *testing.T) {
 	// Настройка конфигурации и хранилища для теста
@@ -96,5 +97,3 @@ func TestApp_Stop(t *testing.T) {
 
 	app.Stop()
 }
-
-
