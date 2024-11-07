@@ -13,12 +13,12 @@ import (
 
 // Тест для проверки запуска и остановки приложения
 func TestMainApplication_StartStop(t *testing.T) {
-	// Моковые объекты для storage и config
-	mockStorage := storage.NewStorage()
-	mockConfig := config.InitConfig()
+	// Инициализация конфигурации и хранилища
+	addrConfig := config.InitConfig()
+	storageInstance := storage.NewStorage()
 
-	// Инициализация приложения
-	appInstance := app.NewApp(mockStorage, mockConfig)
+	// Создаем экземпляр приложения
+	appInstance := app.NewApp(storageInstance, addrConfig)
 
 	// Запуск Pprof в отдельной горутине
 	go func() {
