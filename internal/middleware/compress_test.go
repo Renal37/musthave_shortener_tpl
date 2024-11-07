@@ -3,13 +3,13 @@ package middleware_test
 import (
 	"bytes"
 	"compress/gzip"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware" 
 )
 
 // Helper-функция для сжатия данных с Gzip
