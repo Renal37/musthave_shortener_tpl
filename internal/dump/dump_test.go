@@ -4,44 +4,35 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-// MockStorage только для проверки вызова методов Set
-type MockStorage struct {
-	mock.Mock
-}
-
-func (m *MockStorage) Set(originalURL, shortURL string) {
-	m.Called(originalURL, shortURL)
-}
-
-func TestMockStorageSet(t *testing.T) {
-	// Подготовка мокового хранилища с ожиданиями
-	mockStorage := new(MockStorage)
-	mockStorage.On("Set", "originalURL1", "shortURL1").Return()
-	mockStorage.On("Set", "originalURL2", "shortURL2").Return()
-
-	// Проверка, что методы можно вызвать и что они были вызваны с заданными аргументами
-	mockStorage.Set("originalURL1", "shortURL1")
-	mockStorage.Set("originalURL2", "shortURL2")
-	mockStorage.AssertExpectations(t)
-}
-
-func TestTemporaryFileCreation(t *testing.T) {
-	// Создание и проверка временного файла
-	file, err := os.CreateTemp("", "test_temp_file_*.json")
+func TestFillFromStorage(t *testing.T) {
+	// Создаем временный файл для теста
+	tempFile, err := os.CreateTemp("", "test_fill_from_storage_*.json")
 	assert.NoError(t, err)
-	defer os.Remove(file.Name())
+	defer os.Remove(tempFile.Name())
 
-	// Запись данных и проверка успешности
-	_, err = file.WriteString(`{"uuid": "1", "short_url": "shortURL1", "original_url": "originalURL1"}`)
+	// Записываем тестовые данные в файл
+	_, err = tempFile.WriteString(`{"uuid": "1", "short_url": "shortURL1", "original_url": "originalURL1"}
+{"uuid": "2", "short_url": "shortURL2", "original_url": "originalURL2"}`)
 	assert.NoError(t, err)
-	file.Close()
+	tempFile.Close()
 
-	// Чтение данных из файла и проверка содержания
-	content, err := os.ReadFile(file.Name())
+	// Инициализируем новое хранилище
+	storageInstance := storage.NewStorage()
+
+	// Вызываем FillFromStorage
+	err = FillFromStorage(storageInstance, tempFile.Name())
 	assert.NoError(t, err)
-	assert.Contains(t, string(content), `"shortURL1"`)
+
+	// Проверяем, что данные корректно загружены в хранилище
+	value, exists := storageInstance.Get("originalURL1")
+	assert.True(t, exists)
+	assert.Equal(t, "shortURL1", value)
+
+	value, exists = storageInstance.Get("originalURL2")
+	assert.True(t, exists)
+	assert.Equal(t, "shortURL2", value)
 }
