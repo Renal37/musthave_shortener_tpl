@@ -43,8 +43,3 @@ jobs:
           total_coverage=${{ steps.coverage.outputs.total_coverage }}
           coverage_percentage=$(echo "scale=2; $total_coverage * 100 / $full_backend_coverage" | bc)
           echo "Total coverage compared to full backend: ${coverage_percentage}%"
-
-      - name: Upload coverage to Coveralls
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
-        run: bash <(curl -s https://coveralls.io/bash) || echo "Coveralls upload failed!"
