@@ -101,7 +101,6 @@ func TestShortenerService_Get_FromCache(t *testing.T) {
 	mockRepo.AssertCalled(t, "Get", "short123")
 }
 
-
 // Тест для метода Get с ошибкой при извлечении из базы данных
 func TestShortenerService_Get_Error(t *testing.T) {
 	mockRepo := new(MockRepository) // Создаем мок для Repository
@@ -132,7 +131,6 @@ func TestShortenerService_Ping(t *testing.T) {
 	assert.NoError(t, err)
 	mockStore.AssertCalled(t, "PingStore")
 }
-
 
 // Тест для метода CreateRep
 func TestShortenerService_CreateRep(t *testing.T) {
@@ -168,4 +166,3 @@ func TestShortenerService_GetFullRep(t *testing.T) {
 	assert.Equal(t, expectedResult, result)
 	mockStore.AssertCalled(t, "GetFull", "user1", "http://localhost")
 }
-
