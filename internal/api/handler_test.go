@@ -2,15 +2,14 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
 )
 
 func Test_shortenURLHandler(t *testing.T) {
@@ -221,4 +220,20 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 			assert.Equal(t, tt.argsGet.location, res.Header.Get("location"))
 		})
 	}
+}
+func Test_Shortener_Ping(t *testing.T) {
+	t.Run("Пинг сервис", func(t *testing.T) {
+		// Инициализация Gin и роутера
+		r := gin.Default()
+		r.GET("/ping", func(c *gin.Context) {})
+
+		req := httptest.NewRequest(http.MethodGet, "/ping", nil)
+		w := httptest.NewRecorder()
+
+		// Отправка запроса
+		r.ServeHTTP(w, req)
+
+		// Проверка кода ответа
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
 }
