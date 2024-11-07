@@ -266,3 +266,66 @@ func Test_shortenURLHandler_Error(t *testing.T) {
 		})
 	}
 }
+
+func Test_UserURLsHandler(t *testing.T) {
+	storageInstance := storage.NewStorage()
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
+
+	tests := []struct {
+		name         string
+		Storage      RestAPI
+		userID       string
+		newUser      bool
+		expectedCode int
+	}{
+		{
+			name: "existing user with URLs",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			userID:       "existingUser",
+			newUser:      false,
+			expectedCode: http.StatusOK,
+		},
+		{
+			name: "new user",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			userID:       "newUser",
+			newUser:      true,
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name: "user not found",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			userID:       "",
+			newUser:      false,
+			expectedCode: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := gin.Default()
+			r.GET("/api/user/urls", func(c *gin.Context) {
+				// Set userID and newUser in the context
+				c.Set("userID", tt.userID)
+				c.Set("new", tt.newUser)
+				tt.Storage.UserURLsHandler(c)
+			})
+
+			request := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
+			w := httptest.NewRecorder()
+
+			r.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			assert.Equal(t, tt.expectedCode, res.StatusCode)
+		})
+	}
+}
