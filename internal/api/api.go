@@ -78,7 +78,6 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 	return startServer(ServerAddr, r)
 }
 
-
 func startServer(ServerAddr string, r *gin.Engine) error {
 	server := &http.Server{
 		Addr:    ServerAddr,
@@ -105,4 +104,3 @@ func startServer(ServerAddr string, r *gin.Engine) error {
 
 	return nil
 }
-

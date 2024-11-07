@@ -14,4 +14,3 @@ func (s *RestAPI) SetRoutes(r *gin.Engine) {
 	r.GET("/api/user/urls", s.UserURLsHandler)
 	r.DELETE("/api/user/urls", s.DeleteUserUrls)
 }
-
