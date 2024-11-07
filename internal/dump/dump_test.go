@@ -1,38 +1,60 @@
-package dump
+package dump_test
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/stretchr/testify/assert"
 )
 
+type ShortCollector struct {
+	OriginalURL string `json:"original_url"`
+	ShortURL    string `json:"short_url"`
+}
+
 func TestFillFromStorage(t *testing.T) {
-	// Создаем временный файл для теста
-	tempFile, err := os.CreateTemp("", "test_fill_from_storage_*.json")
-	assert.NoError(t, err)
+	// Create a temporary file to simulate the input file
+	tempFile, err := ioutil.TempFile("", "testfile")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
 	defer os.Remove(tempFile.Name())
 
-	// Записываем тестовые данные в файл
-	_, err = tempFile.WriteString(`{"uuid": "1", "short_url": "shortURL1", "original_url": "originalURL1"}
-{"uuid": "2", "short_url": "shortURL2", "original_url": "originalURL2"}`)
-	assert.NoError(t, err)
+	// Prepare test data
+	events := []ShortCollector{
+		{OriginalURL: "http://example.com", ShortURL: "http://short.url/1"},
+		{OriginalURL: "http://example.org", ShortURL: "http://short.url/2"},
+	}
+
+	// Write test data to the temporary file
+	encoder := json.NewEncoder(tempFile)
+	for _, event := range events {
+		if err := encoder.Encode(event); err != nil {
+			t.Fatalf("Failed to encode event: %v", err)
+		}
+	}
 	tempFile.Close()
 
-	// Инициализируем новое хранилище
+	// Create a new storage instance
 	storageInstance := storage.NewStorage()
 
-	// Вызываем FillFromStorage
-	err = FillFromStorage(storageInstance, tempFile.Name())
-	assert.NoError(t, err)
+	// Call the function under test
+	err = dump.FillFromStorage(storageInstance, tempFile.Name())
+	if err != nil {
+		t.Fatalf("FillFromStorage returned an error: %v", err)
+	}
 
-	// Проверяем, что данные корректно загружены в хранилище
-	value, exists := storageInstance.Get("originalURL1")
-	assert.True(t, exists)
-	assert.Equal(t, "shortURL1", value)
-
-	value, exists = storageInstance.Get("originalURL2")
-	assert.True(t, exists)
-	assert.Equal(t, "shortURL2", value)
+	// Verify that the storage contains the expected data
+	for _, event := range events {
+		shortURL, exists := storageInstance.Get(event.OriginalURL)
+		if !exists {
+			t.Errorf("Expected URL %s to exist in storage", event.OriginalURL)
+		}
+		if shortURL != event.ShortURL {
+			t.Errorf("Expected short URL %s, got %s", event.ShortURL, shortURL)
+		}
+	}
 }
