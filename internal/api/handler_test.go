@@ -221,19 +221,48 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 		})
 	}
 }
-func Test_Shortener_Ping(t *testing.T) {
-	t.Run("Пинг сервис", func(t *testing.T) {
-		// Инициализация Gin и роутера
-		r := gin.Default()
-		r.GET("/ping", func(c *gin.Context) {})
+func Test_shortenURLHandler_Error(t *testing.T) {
+	storageInstance := storage.NewStorage()
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
 
-		req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-		w := httptest.NewRecorder()
+	tests := []struct {
+		name    string
+		Storage RestAPI
+		body    string
+		code    int
+	}{
+		{
+			name: "invalid JSON",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			body: "{invalid-json}",
+			code: http.StatusInternalServerError,
+		},
+		{
+			name: "empty body",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			body: "",
+			code: http.StatusInternalServerError,
+		},
+	}
 
-		// Отправка запроса
-		r.ServeHTTP(w, req)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := gin.Default()
+			r.POST("/api/shorten", tt.Storage.ShortenURLJSON)
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
+			request.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
 
-		// Проверка кода ответа
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
+			r.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			assert.Equal(t, tt.code, res.StatusCode)
+		})
+	}
 }
