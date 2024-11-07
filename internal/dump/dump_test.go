@@ -2,7 +2,6 @@ package dump_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -10,51 +9,52 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
+// Структура ShortCollector для хранения тестовых данных
 type ShortCollector struct {
 	OriginalURL string `json:"original_url"`
 	ShortURL    string `json:"short_url"`
 }
 
 func TestFillFromStorage(t *testing.T) {
-	// Create a temporary file to simulate the input file
-	tempFile, err := ioutil.TempFile("", "testfile")
+	// Создаем временный файл для симуляции входного файла
+	tempFile, err := os.CreateTemp("", "testfile")
 	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
+		t.Fatalf("Не удалось создать временный файл: %v", err)
 	}
-	defer os.Remove(tempFile.Name())
+	defer os.Remove(tempFile.Name()) // Удаляем файл после теста
 
-	// Prepare test data
+	// Подготавливаем тестовые данные
 	events := []ShortCollector{
 		{OriginalURL: "http://example.com", ShortURL: "http://short.url/1"},
 		{OriginalURL: "http://example.org", ShortURL: "http://short.url/2"},
 	}
 
-	// Write test data to the temporary file
+	// Записываем тестовые данные в временный файл
 	encoder := json.NewEncoder(tempFile)
 	for _, event := range events {
 		if err := encoder.Encode(event); err != nil {
-			t.Fatalf("Failed to encode event: %v", err)
+			t.Fatalf("Не удалось закодировать событие: %v", err)
 		}
 	}
-	tempFile.Close()
+	tempFile.Close() // Закрываем временный файл для завершения записи
 
-	// Create a new storage instance
+	// Создаем новый экземпляр хранилища
 	storageInstance := storage.NewStorage()
 
-	// Call the function under test
+	// Вызываем тестируемую функцию
 	err = dump.FillFromStorage(storageInstance, tempFile.Name())
 	if err != nil {
-		t.Fatalf("FillFromStorage returned an error: %v", err)
+		t.Fatalf("FillFromStorage вернул ошибку: %v", err)
 	}
 
-	// Verify that the storage contains the expected data
+	// Проверяем, что в хранилище содержатся ожидаемые данные
 	for _, event := range events {
 		shortURL, exists := storageInstance.Get(event.OriginalURL)
 		if !exists {
-			t.Errorf("Expected URL %s to exist in storage", event.OriginalURL)
+			t.Errorf("Ожидалось, что URL %s будет в хранилище", event.OriginalURL)
 		}
 		if shortURL != event.ShortURL {
-			t.Errorf("Expected short URL %s, got %s", event.ShortURL, shortURL)
+			t.Errorf("Ожидался короткий URL %s, но был получен %s", event.ShortURL, shortURL)
 		}
 	}
 }
