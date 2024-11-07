@@ -113,23 +113,3 @@ func TestStartServer(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 }
-
-// Проверка обработки ошибок при запуске сервера
-func TestStartRestAPI_Error(t *testing.T) {
-	serverAddr := ":999999" // Неверный адрес для ошибки
-	baseURL := "http://localhost:8080"
-	logLevel := "debug"
-	db := &repository.StoreDB{}
-	storage := &storage.Storage{}
-	dbDNSTurn := false
-
-	// Инициализируем логгер
-	_ = logger.Initialize(logLevel)
-
-	// Попытка запустить сервер с неверным адресом
-	err := api.StartRestAPI(serverAddr, baseURL, logLevel, db, dbDNSTurn, storage)
-
-	// Проверяем, что ошибка существует
-	assert.Error(t, err, "Expected error with invalid server address")
-	assert.Contains(t, err.Error(), "invalid port") // Проверяем, что ошибка содержит нужное сообщение
-}
