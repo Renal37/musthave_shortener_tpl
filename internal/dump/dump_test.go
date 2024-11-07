@@ -2,11 +2,11 @@ package dump_test
 
 import (
 	"encoding/json"
-	"os"
-	"testing"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"testing"
 )
 
 // Структура ShortCollector для хранения тестовых данных
