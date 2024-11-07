@@ -1,42 +1,37 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
-// Тест для проверки запуска и остановки приложения
-func TestMainApplication_StartStop(t *testing.T) {
-	// Инициализация конфигурации и хранилища
-	addrConfig := config.InitConfig()
+func TestShortenURLHandler(t *testing.T) {
+	// Инициализация зависимостей
 	storageInstance := storage.NewStorage()
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
+	handler := api.RestAPI{Shortener: storageShortener}
 
-	// Создаем экземпляр приложения
-	appInstance := app.NewApp(storageInstance, addrConfig)
+	// Настройка роутера Gin
+	r := gin.Default()
+	r.POST("/", handler.ShortenURLHandler)
 
-	// Запуск Pprof в отдельной горутине
-	go func() {
-		err := http.ListenAndServe("localhost:6060", nil)
-		assert.NoError(t, err, "Pprof server failed to start")
-	}()
+	// Создание HTTP-запроса
+	body := "https://practicum.yandex.ru/"
+	request := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
+	w := httptest.NewRecorder()
 
-	// Запускаем приложение в отдельной горутине
-	go func() {
-		appInstance.Start()
-	}()
+	// Выполнение запроса
+	r.ServeHTTP(w, request)
 
-	// Ожидание 1 секунды для симуляции работы приложения
-	time.Sleep(1 * time.Second)
-
-	// Останавливаем приложение
-	appInstance.Stop()
-
-	// Проверяем, что приложение успешно остановлено
-	assert.NotNil(t, appInstance, "App instance should not be nil")
+	// Проверка результатов
+	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Contains(t, w.Body.String(), "http://localhost:8080/")
 }
