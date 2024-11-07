@@ -7,7 +7,7 @@ import (
 	"golang.org/x/tools/go/analysis/singlechecker"
 	"honnef.co/go/tools/staticcheck"
 
-	"github.com/Renal37/musthave_shortener_tpl.git/cmd/staticlint/analyzers" 
+	"github.com/Renal37/musthave_shortener_tpl.git/cmd/staticlint/analyzers"
 )
 
 func main() {
