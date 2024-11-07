@@ -1,6 +1,7 @@
 package services_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -52,7 +53,7 @@ func (m *MockRepository) Get(shortID string) (string, bool) {
 	return args.String(0), args.Bool(1)
 }
 
-// Тест для метода Set
+// Тест для метода Set (позитивный сценарий)
 func TestShortenerService_Set(t *testing.T) {
 	mockRepo := new(MockRepository) // Создаем мок для Repository
 	mockStore := new(MockStore)     // Создаем мок для Store
@@ -68,8 +69,24 @@ func TestShortenerService_Set(t *testing.T) {
 	mockStore.AssertCalled(t, "Create", "https://example.com", mock.Anything, "user1")
 }
 
-// Тест для метода Get (проверка через кэш и БД)
-func TestShortenerService_Get(t *testing.T) {
+// Тест для метода Set с ошибкой
+func TestShortenerService_Set_Error(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
+
+	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
+
+	mockStore.On("Create", "https://example.com", mock.Anything, "user1").Return(errors.New("database error"))
+
+	shortURL, err := service.Set("user1", "https://example.com")
+
+	assert.Error(t, err)
+	assert.Empty(t, shortURL)
+	mockStore.AssertCalled(t, "Create", "https://example.com", mock.Anything, "user1")
+}
+
+// Тест для метода Get через кэш
+func TestShortenerService_Get_FromCache(t *testing.T) {
 	mockRepo := new(MockRepository) // Создаем мок для Repository
 	mockStore := new(MockStore)     // Создаем мок для Store
 
@@ -83,3 +100,72 @@ func TestShortenerService_Get(t *testing.T) {
 	assert.Equal(t, "https://example.com", originalURL)
 	mockRepo.AssertCalled(t, "Get", "short123")
 }
+
+
+// Тест для метода Get с ошибкой при извлечении из базы данных
+func TestShortenerService_Get_Error(t *testing.T) {
+	mockRepo := new(MockRepository) // Создаем мок для Repository
+	mockStore := new(MockStore)     // Создаем мок для Store
+
+	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
+
+	mockStore.On("Get", "short123", "").Return("", errors.New("db error"))
+
+	originalURL, err := service.Get("short123")
+
+	assert.Error(t, err)
+	assert.Empty(t, originalURL)
+	mockStore.AssertCalled(t, "Get", "short123", "")
+}
+
+// Тест для метода Ping (позитивный сценарий)
+func TestShortenerService_Ping(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
+
+	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
+
+	mockStore.On("PingStore").Return(nil)
+
+	err := service.Ping()
+
+	assert.NoError(t, err)
+	mockStore.AssertCalled(t, "PingStore")
+}
+
+
+// Тест для метода CreateRep
+func TestShortenerService_CreateRep(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
+
+	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
+
+	mockStore.On("Create", "https://example.com", "short123", "user1").Return(nil)
+
+	err := service.CreateRep("https://example.com", "short123", "user1")
+
+	assert.NoError(t, err)
+	mockStore.AssertCalled(t, "Create", "https://example.com", "short123", "user1")
+}
+
+// Тест для метода GetFullRep
+func TestShortenerService_GetFullRep(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
+
+	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
+
+	expectedResult := []map[string]string{
+		{"short_url": "http://localhost/short123", "original_url": "https://example.com"},
+	}
+
+	mockStore.On("GetFull", "user1", "http://localhost").Return(expectedResult, nil)
+
+	result, err := service.GetFullRep("user1")
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedResult, result)
+	mockStore.AssertCalled(t, "GetFull", "user1", "http://localhost")
+}
+
