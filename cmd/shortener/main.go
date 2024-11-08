@@ -47,3 +47,4 @@ func main() {
 }
 
 // go build -ldflags "-X main.buildVersion=1.0.0 -X main.buildDate=$(date +%Y-%m-%d) -X main.buildCommit=$(git rev-parse HEAD)" -o shortener cmd/shortener/main.go
+// ./shortener
