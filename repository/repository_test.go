@@ -218,3 +218,16 @@ func TestStoreDB_PingStore_Error(t *testing.T) {
 	assert.Equal(t, "pinging db-store: ping error", err.Error()) // Проверяем текст ошибки
 	assert.NoError(t, mock.ExpectationsWereMet())                // Проверяем, что все ожидания выполнены
 }
+
+func TestCreateTable(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectExec("CREATE TABLE IF NOT EXISTS urls").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = createTable(db)
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
