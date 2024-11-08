@@ -1,9 +1,8 @@
 package api
 
-// Импортируем необходимые пакеты
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,68 +12,95 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/Renal37/musthave_shortener_tpl.git/store"
+	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-// Определяем структуру RestAPI, которая будет хранить ссылку на ShortenerService
+// RestAPI представляет собой структуру для REST API.
 type RestAPI struct {
-	StructService *services.ShortenerService
+	Shortener *services.ShortenerService // Сервис для сокращения URL.
 }
 
-// Функция StartRestAPI запускает REST API сервер
-func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *store.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
-	// Инициализируем логгер с указанным уровнем логирования
+// StartRestAPI запускает HTTP-сервер REST API для обработки запросов сокращения URL.
+//
+// Сервер создает и настраивает маршруты с использованием middleware и предоставляет эндпоинты
+// для работы с короткими ссылками, а также обеспечивает автоматическое логирование запросов и управление авторизацией.
+//
+// Параметры:
+//   - ServerAddr: Адрес для запуска сервера, например, ":8080".
+//   - BaseURL: Базовый URL сервиса сокращения ссылок.
+//   - LogLevel: Уровень логирования, например, "info" или "debug".
+//   - db: Объект StoreDB для хранения данных в базе (предполагается реализация интерфейса базы данных).
+//   - dbDNSTurn: Логический флаг, указывающий, использовать ли DNS-трансляцию для базы данных.
+//   - storage: Объект Storage для хранения данных (предполагается реализация интерфейса хранилища).
+//
+// Пример использования:
+//
+//	go func() {
+//	    err := StartRestAPI(":8080", "http://example.com", "info", db, false, storage)
+//	    if err != nil {
+//	        log.Fatalf("Ошибка запуска API: %v", err)
+//	    }
+//	}()
+//
+// Известные ограничения:
+//   - Если сервер запущен, его завершение произойдет при получении сигнала остановки от системы.
+//   - Время завершения при остановке ограничено 5 секундами (по умолчанию).
+//
+// BUG(Автор): Текущее логирование ограничено уровнем info; более детализированные уровни требуют дальнейшей настройки.
+// BUG(Автор): В конфигурации сервера может отсутствовать поддержка HTTPS.
+func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
 	}
-	// Выводим сообщение об успешном запуске сервера с указанным адресом
-	logger.Log.Info("Запуск сервера", zap.String("адрес", ServerAddr))
-	// Создаем новый ShortenerService с указанными параметрами
+
+	logger.Log.Info("Running server", zap.String("address", ServerAddr))
 	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
-	// Создаем новый экземпляр RestAPI с указанным ShortenerService
+
 	api := &RestAPI{
-		StructService: storageShortener,
+		Shortener: storageShortener,
 	}
-	// Устанавливаем режим работы Gin на ReleaseMode
+
 	gin.SetMode(gin.ReleaseMode)
-	// Создаем новый Gin router
 	r := gin.Default()
-	// Используем Gin recovery middleware
-	r.Use(gin.Recovery())
-	// Используем LoggerMiddleware с указанным логгером
-	r.Use(middleware.LoggerMiddleware(logger.Log))
-	// Используем CompressMiddleware
-	r.Use(middleware.CompressMiddleware())
-	// Устанавливаем маршруты для API с помощью функции api.setRoutes
-	api.setRoutes(r)
-	// Создаем новый HTTP сервер с адресом ":8080" и указанным router в качестве Handler
+
+	r.Use(
+		gin.Recovery(),
+		middleware.LoggerMiddleware(logger.Log),
+		middleware.CompressMiddleware(),
+		middleware.AuthorizationMiddleware(),
+	)
+
+	api.SetRoutes(r)
+
+	// Мы ожидаем ошибку от startServer
+	return startServer(ServerAddr, r)
+}
+
+func startServer(ServerAddr string, r *gin.Engine) error {
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    ServerAddr,
 		Handler: r,
 	}
-	// Создаем канал для получения OS сигналов
+
 	quit := make(chan os.Signal, 1)
-	// Регистрируем os.Interrupt сигнал в канал quit
 	signal.Notify(quit, os.Interrupt)
-	// Запускаем горутину для запуска сервера на указанном адресе
+
 	go func() {
-		err := r.Run(ServerAddr)
-		if err != nil {
-			fmt.Println("Не удалось запустить браузер")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Ошибка при запуске сервера: %v", err) // Меняем на log.Printf
 		}
 	}()
-	// Ждем получения сигнала в канал quit
+
 	<-quit
-	// Создаем контекст с 5-секундным таймаутом
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// Отменяем контекст при завершении функции
 	defer cancel()
-	// Грациозно остановляем сервер с помощью контекста
+
 	if err := server.Shutdown(ctx); err != nil {
-		fmt.Printf("Ошибка при остановке сервера: %v\n", err)
+		log.Printf("Ошибка при остановке сервера: %v\n", err)
+		return err // Возвращаем ошибку
 	}
-	// Если сервер успешно запущен и остановлен, возвращаем nil
+
 	return nil
 }

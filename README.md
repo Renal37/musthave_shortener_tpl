@@ -30,3 +30,7 @@ git fetch template && git checkout template/main .github
 При мёрже ветки с инкрементом в основную ветку `main` будут запускаться все автотесты.
 
 Подробнее про локальный и автоматический запуск читайте в [README автотестов](https://github.com/Yandex-Practicum/go-autotests).
+
+## Coverage 
+
+[![Coverage Status](https://coveralls.io/repos/github/Renal37/musthave_shortener_tpl/badge.svg)](https://coveralls.io/github/Renal37/musthave_shortener_tpl)

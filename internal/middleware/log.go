@@ -6,39 +6,23 @@ import (
 	"time"
 )
 
-// LoggerMiddleware возвращает middleware для логирования запросов и ответов с использованием zap.Logger
-func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
+// LoggerMiddleware создает middleware для логирования запросов с использованием zap.Logger.
+func LoggerMiddleware(logger *zap.SugaredLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Запоминаем время начала запроса
-		start := time.Now()
+		start := time.Now() // Запоминаем время начала обработки запроса
+		c.Next()            // Передаем управление следующему обработчику
 
-		// Обработка запроса
-		c.Next()
-
-		// Вычисляем длительность запроса
-		duration := time.Since(start)
-
-		// Получаем статус-код ответа
-		statusCode := c.Writer.Status()
-
-		// Получаем длину содержимого ответа
-		contentLength := c.Writer.Size()
-		if contentLength < 0 {
-			contentLength = 0
-		}
+		duration := time.Since(start)           // Вычисляем продолжительность обработки
+		statusCode := c.Writer.Status()         // Получаем код статуса ответа
+		contentLength := int64(c.Writer.Size()) // Получаем размер содержимого ответа
 
 		// Логируем информацию о запросе
-		logger.Info("Request",
-			zap.String("method", c.Request.Method),
-			zap.String("path", c.Request.URL.Path), // Исправлено название поля на "path"
-			zap.Duration("duration", duration),     // Исправлено название поля на "duration"
-			zap.String("Response", ""),
-		)
-
-		// Логируем информацию об ответе
-		logger.Info("Response",
-			zap.Int("statusCode", statusCode),
-			zap.Int("contentLength", contentLength), // Исправлено тип поля на zap.Int, так как Size() возвращает int
+		logger.Infow("Request",
+			"method", c.Request.Method, // Метод HTTP запроса
+			"path", c.Request.URL.Path, // Путь запроса
+			"duration", duration, // Продолжительность обработки
+			"statusCode", statusCode, // Код статуса ответа
+			"contentLength", contentLength, // Длина содержимого ответа
 		)
 	}
 }

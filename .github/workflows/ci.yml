@@ -1,0 +1,50 @@
+name: Go CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.22.4'
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Install goveralls
+        run: go get github.com/mattn/goveralls
+
+      - name: Run tests with coverage
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: Calculate total coverage
+        id: coverage
+        run: |
+          total_coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+          echo "total_coverage=$total_coverage" >> $GITHUB_OUTPUT
+
+      - name: Display total coverage
+        run: echo "Total test coverage - ${{ steps.coverage.outputs.total_coverage }}%"
+
+      - name: Calculate backend coverage
+        run: |
+          full_backend_coverage=80
+          total_coverage=${{ steps.coverage.outputs.total_coverage }}
+          coverage_percentage=$(echo "scale=2; $total_coverage * 100 / $full_backend_coverage" | bc)
+          echo "Total coverage compared to full backend: ${coverage_percentage}%"
+
+      - name: Upload coverage to Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+        run: bash <(curl -s https://coveralls.io/bash) || echo "Coveralls upload failed!"
