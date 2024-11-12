@@ -39,7 +39,7 @@ const SECRETKEY = "supersecretkey"
 // Если пользователь не авторизован, оно отвечает кодом состояния 401.
 func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userInfo, err := getUserIDFromCookie(c)
+		userInfo, err := GetUserIDFromCookie(c)
 		if err != nil {
 			code := http.StatusUnauthorized
 			contentType := c.Request.Header.Get("Content-Type")
@@ -63,7 +63,7 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 // getUserIDFromCookie извлекает ID пользователя из cookie.
 // Если cookie не существует, он создает новый JWT токен и устанавливает его в cookie.
 // Возвращает информацию о пользователе и любую ошибку, возникшую в процессе.
-func getUserIDFromCookie(c *gin.Context) (*user.User, error) {
+func GetUserIDFromCookie(c *gin.Context) (*user.User, error) {
 	token, err := c.Cookie("userID")
 	newToken := false
 	if err != nil {

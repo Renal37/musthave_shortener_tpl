@@ -2,15 +2,14 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
 )
 
 func Test_shortenURLHandler(t *testing.T) {
@@ -219,6 +218,51 @@ func Test_redirectToOriginalURLHandler(t *testing.T) {
 			defer res.Body.Close()
 			assert.Equal(t, tt.argsGet.code, res.StatusCode)
 			assert.Equal(t, tt.argsGet.location, res.Header.Get("location"))
+		})
+	}
+}
+func Test_shortenURLHandler_Error(t *testing.T) {
+	storageInstance := storage.NewStorage()
+	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
+
+	tests := []struct {
+		name    string
+		Storage RestAPI
+		body    string
+		code    int
+	}{
+		{
+			name: "invalid JSON",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			body: "{invalid-json}",
+			code: http.StatusInternalServerError,
+		},
+		{
+			name: "empty body",
+			Storage: RestAPI{
+				Shortener: storageShortener,
+			},
+			body: "",
+			code: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := gin.Default()
+			r.POST("/api/shorten", tt.Storage.ShortenURLJSON)
+			request := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
+			request.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+
+			r.ServeHTTP(w, request)
+
+			res := w.Result()
+			defer res.Body.Close()
+
+			assert.Equal(t, tt.code, res.StatusCode)
 		})
 	}
 }
