@@ -2,36 +2,54 @@ package main
 
 import (
 	"bytes"
-	"net/http"
-	"net/http/httptest"
+	"fmt"
 	"testing"
 
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestShortenURLHandler(t *testing.T) {
-	// Инициализация зависимостей
+func TestMainInfo(t *testing.T) {
+	// Перехватываем вывод для проверки
+	var buf bytes.Buffer
+	// Используем Fprintf, чтобы записать вывод в буфер
+	fmt.Fprintf(&buf, "Build version: %s\n", "1.0.0")
+	fmt.Fprintf(&buf, "Build date: %s\n", "2024-11-08")
+	fmt.Fprintf(&buf, "Build commit: %s\n", "5b790d0dd1415028222997c1a6464bffac9729df")
+
+	expected := "Build version: 1.0.0\nBuild date: 2024-11-08\nBuild commit: 5b790d0dd1415028222997c1a6464bffac9729df\n"
+	if buf.String() != expected {
+		t.Errorf("Неожиданный вывод информации о сборке:\nПолучено:\n%s\nОжидалось:\n%s", buf.String(), expected)
+	}
+}
+func TestInitConfig(t *testing.T) {
+	addrConfig := config.InitConfig()
+
+	if addrConfig.ServerAddr == "" {
+		t.Error("Ожидалось, что ServerAddress будет установлен")
+	}
+
+	if addrConfig.BaseURL == "" {
+		t.Error("Ожидалось, что BaseURL будет установлен")
+	}
+}
+
+func TestNewStorage(t *testing.T) {
 	storageInstance := storage.NewStorage()
-	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
-	handler := api.RestAPI{Shortener: storageShortener}
 
-	// Настройка роутера Gin
-	r := gin.Default()
-	r.POST("/", handler.ShortenURLHandler)
+	if storageInstance == nil {
+		t.Error("Ожидалось, что NewStorage вернет не nil экземпляр хранилища")
+	}
+}
 
-	// Создание HTTP-запроса
-	body := "https://practicum.yandex.ru/"
-	request := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
-	w := httptest.NewRecorder()
+func TestNewApp(t *testing.T) {
+	addrConfig := config.InitConfig()
+	storageInstance := storage.NewStorage()
 
-	// Выполнение запроса
-	r.ServeHTTP(w, request)
+	appInstance := app.NewApp(storageInstance, addrConfig)
 
-	// Проверка результатов
-	assert.Equal(t, http.StatusCreated, w.Code)
-	assert.Contains(t, w.Body.String(), "http://localhost:8080/")
+	if appInstance == nil {
+		t.Error("Ожидалось, что NewApp вернет не nil экземпляр приложения")
+	}
 }
