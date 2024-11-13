@@ -13,7 +13,10 @@ type Config struct {
 	LogLevel    string `env:"FLAG_LOG_LEVEL"`    // Уровень логирования
 	FilePath    string `env:"FILE_STORAGE_PATH"` // Путь к файлу для хранения
 	DBPath      string `env:"DB_PATH"`           // Путь к базе данных
-	EnablePprof string `env:"ENABLE_PPROF"`      // Путь к pprof
+	EnablePprof string `env:"ENABLE_PPROF"`      // Включить pprof
+	EnableHTTPS string `env:"ENABLE_HTTPS"`      // Включить HTTPS
+	CertFile    string `env:"CERT_FILE"`         // Путь к файлу сертификата
+	KeyFile     string `env:"KEY_FILE"`          // Путь к файлу ключа
 }
 
 var once sync.Once
@@ -26,7 +29,10 @@ func InitConfig() *Config {
 		LogLevel:    "info",                  // Значение по умолчанию для уровня логирования
 		FilePath:    "short-url-db.json",     // Значение по умолчанию для пути к файлу
 		DBPath:      "",                      // Значение по умолчанию для пути к базе данных
-		EnablePprof: "false",                 // Значение по умолчанию для пути к pprof
+		EnablePprof: "false",                 // Значение по умолчанию для pprof
+		EnableHTTPS: "false",                 // Значение по умолчанию для включения HTTPS
+		CertFile:    "server.crt",            // Значение по умолчанию для сертификата
+		KeyFile:     "server.key",            // Значение по умолчанию для ключа
 	}
 
 	// Определяем флаги командной строки
@@ -36,7 +42,10 @@ func InitConfig() *Config {
 		flag.StringVar(&config.LogLevel, "c", config.LogLevel, "log level")
 		flag.StringVar(&config.FilePath, "f", config.FilePath, "path to file for storage")
 		flag.StringVar(&config.DBPath, "d", config.DBPath, "path to database")
-		flag.StringVar(&config.EnablePprof, "e", config.EnablePprof, "pprof")
+		flag.StringVar(&config.EnablePprof, "e", config.EnablePprof, "enable pprof")
+		flag.StringVar(&config.EnableHTTPS, "s", config.EnableHTTPS, "enable https (true/false)")
+		flag.StringVar(&config.CertFile, "cert", config.CertFile, "path to the SSL certificate file")
+		flag.StringVar(&config.KeyFile, "key", config.KeyFile, "path to the SSL key file")
 		flag.Parse() // Парсим флаги командной строки
 	})
 
