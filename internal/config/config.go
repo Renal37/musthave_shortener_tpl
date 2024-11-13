@@ -1,27 +1,69 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
-	"github.com/caarlos0/env/v6"
+	"fmt"
+	"os"
 	"sync"
+
+	"github.com/caarlos0/env/v6"
 )
 
 // Config представляет собой структуру для хранения конфигурационных параметров приложения.
 type Config struct {
-	ServerAddr  string `env:"SERVER_ADDRESS"`    // Адрес и порт сервера
-	BaseURL     string `env:"BASE_URL"`          // Базовый URL
-	LogLevel    string `env:"FLAG_LOG_LEVEL"`    // Уровень логирования
-	FilePath    string `env:"FILE_STORAGE_PATH"` // Путь к файлу для хранения
-	DBPath      string `env:"DB_PATH"`           // Путь к базе данных
-	EnablePprof string `env:"ENABLE_PPROF"`      // Включить pprof
-	EnableHTTPS string `env:"ENABLE_HTTPS"`      // Включить HTTPS
-	CertFile    string `env:"CERT_FILE"`         // Путь к файлу сертификата
-	KeyFile     string `env:"KEY_FILE"`          // Путь к файлу ключа
+	ServerAddr  string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес и порт сервера
+	BaseURL     string `env:"BASE_URL" json:"base_url"`                   // Базовый URL
+	LogLevel    string `env:"FLAG_LOG_LEVEL" json:"-"`                    // Уровень логирования (только флаг или env)
+	FilePath    string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для хранения
+	DBPath      string `env:"DB_PATH" json:"database_dsn"`                // Путь к базе данных
+	EnablePprof string `env:"ENABLE_PPROF" json:"-"`                      // Включить pprof (только флаг или env)
+	EnableHTTPS bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // Включить HTTPS
+	CertFile    string `env:"CERT_FILE" json:"-"`                         // Путь к файлу сертификата (только флаг или env)
+	KeyFile     string `env:"KEY_FILE" json:"-"`                          // Путь к файлу ключа (только флаг или env)
+	ConfigPath  string `env:"CONFIG" json:"-"`                            // Путь к файлу конфигурации (только флаг или env)
 }
 
 var once sync.Once
 
-// InitConfig инициализирует конфигурацию, загружая параметры из переменных окружения и флагов командной строки.
+// LoadConfigFromFile загружает конфигурацию из файла JSON, если файл указан.
+func LoadConfigFromFile(path string) (*Config, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	config := &Config{}
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+// mergeConfigs объединяет данные из JSON-конфигурации и основной конфигурации (где данные из флагов и env имеют приоритет).
+func mergeConfigs(base, fileConfig *Config) *Config {
+	if fileConfig.ServerAddr != "" {
+		base.ServerAddr = fileConfig.ServerAddr
+	}
+	if fileConfig.BaseURL != "" {
+		base.BaseURL = fileConfig.BaseURL
+	}
+	if fileConfig.FilePath != "" {
+		base.FilePath = fileConfig.FilePath
+	}
+	if fileConfig.DBPath != "" {
+		base.DBPath = fileConfig.DBPath
+	}
+	if fileConfig.EnableHTTPS {
+		base.EnableHTTPS = fileConfig.EnableHTTPS
+	}
+	return base
+}
+
+// InitConfig инициализирует конфигурацию, загружая параметры из файла, переменных окружения и флагов командной строки.
 func InitConfig() *Config {
 	config := &Config{
 		ServerAddr:  "localhost:8080",        // Значение по умолчанию для адреса сервера
@@ -30,7 +72,7 @@ func InitConfig() *Config {
 		FilePath:    "short-url-db.json",     // Значение по умолчанию для пути к файлу
 		DBPath:      "",                      // Значение по умолчанию для пути к базе данных
 		EnablePprof: "false",                 // Значение по умолчанию для pprof
-		EnableHTTPS: "false",                 // Значение по умолчанию для включения HTTPS
+		EnableHTTPS: false,                   // Значение по умолчанию для HTTPS
 		CertFile:    "server.crt",            // Значение по умолчанию для сертификата
 		KeyFile:     "server.key",            // Значение по умолчанию для ключа
 	}
@@ -43,16 +85,28 @@ func InitConfig() *Config {
 		flag.StringVar(&config.FilePath, "f", config.FilePath, "path to file for storage")
 		flag.StringVar(&config.DBPath, "d", config.DBPath, "path to database")
 		flag.StringVar(&config.EnablePprof, "e", config.EnablePprof, "enable pprof")
-		flag.StringVar(&config.EnableHTTPS, "s", config.EnableHTTPS, "enable https (true/false)")
+		flag.BoolVar(&config.EnableHTTPS, "s", config.EnableHTTPS, "enable https (true/false)")
 		flag.StringVar(&config.CertFile, "cert", config.CertFile, "path to the SSL certificate file")
 		flag.StringVar(&config.KeyFile, "key", config.KeyFile, "path to the SSL key file")
+		flag.StringVar(&config.ConfigPath, "config", config.ConfigPath, "path to config file")
 		flag.Parse() // Парсим флаги командной строки
 	})
 
 	// Загружаем параметры из переменных окружения
 	err := env.Parse(config)
 	if err != nil {
-		panic(err) // Завершаем программу, если произошла ошибка
+		panic(fmt.Sprintf("Error parsing env variables: %v", err))
+	}
+
+	// Если указан файл конфигурации, загружаем его
+	if config.ConfigPath != "" {
+		fileConfig, err := LoadConfigFromFile(config.ConfigPath)
+		if err != nil {
+			fmt.Printf("Error loading config file: %v\n", err)
+		} else {
+			// Объединяем конфигурацию из файла с основной (данные из файла имеют меньший приоритет)
+			config = mergeConfigs(config, fileConfig)
+		}
 	}
 
 	return config // Возвращаем структуру конфигурации

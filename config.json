@@ -1,0 +1,7 @@
+{
+    "server_address": "localhost:8443",
+    "base_url": "https://localhost",
+    "file_storage_path": "/path/to/file.db",
+    "database_dsn": "user:password@tcp(127.0.0.1:3306)/dbname",
+    "enable_https": true
+}
