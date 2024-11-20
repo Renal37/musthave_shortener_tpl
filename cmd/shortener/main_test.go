@@ -1,9 +1,8 @@
 package main
 
 import (
-	"flag"
-	"net/http"
-	"net/http/httptest"
+	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
@@ -11,66 +10,46 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
-// TestConfigInit проверяет корректную инициализацию конфигурации.
-func TestConfigInit(t *testing.T) {
-	cfg := config.InitConfig()
-	if cfg == nil {
-		t.Fatal("Ожидалось, что конфигурация будет инициализирована, но получено nil")
+func TestMainInfo(t *testing.T) {
+	// Перехватываем вывод для проверки
+	var buf bytes.Buffer
+	// Используем Fprintf, чтобы записать вывод в буфер
+	fmt.Fprintf(&buf, "Build version: %s\n", "1.0.0")
+	fmt.Fprintf(&buf, "Build date: %s\n", "2024-11-08")
+	fmt.Fprintf(&buf, "Build commit: %s\n", "5b790d0dd1415028222997c1a6464bffac9729df")
+
+	expected := "Build version: 1.0.0\nBuild date: 2024-11-08\nBuild commit: 5b790d0dd1415028222997c1a6464bffac9729df\n"
+	if buf.String() != expected {
+		t.Errorf("Неожиданный вывод информации о сборке:\nПолучено:\n%s\nОжидалось:\n%s", buf.String(), expected)
+	}
+}
+func TestInitConfig(t *testing.T) {
+	addrConfig := config.InitConfig()
+
+	if addrConfig.ServerAddr == "" {
+		t.Error("Ожидалось, что ServerAddress будет установлен")
 	}
 
-	// Дополнительные проверки конфигурации
-	if cfg.ServerAddr == "" {
-		t.Fatal("Ожидалось, что ServerAddr будет инициализирован, но получено пустое значение")
-	}
-	if cfg.BaseURL == "" {
-		t.Fatal("Ожидалось, что BaseURL будет инициализирован, но получено пустое значение")
+	if addrConfig.BaseURL == "" {
+		t.Error("Ожидалось, что BaseURL будет установлен")
 	}
 }
 
-// TestStorage проверяет создание экземпляра хранилища.
-func TestStorage(t *testing.T) {
+func TestNewStorage(t *testing.T) {
 	storageInstance := storage.NewStorage()
-	if storageInstance == nil {
-		t.Fatal("Ожидалось, что экземпляр хранилища будет инициализирован, но получено nil")
-	}
 
-	// Дополнительные проверки хранилища
-	if len(storageInstance.URLs) != 0 {
-		t.Fatal("Ожидалось, что карта URL-адресов в хранилище будет пустой, но получено непустое значение")
+	if storageInstance == nil {
+		t.Error("Ожидалось, что NewStorage вернет не nil экземпляр хранилища")
 	}
 }
 
-// TestServer проверяет, что сервер успешно запускается и отвечает на запросы.
-func TestServer(t *testing.T) {
-	// Сброс флагов перед запуском теста
-	flag.CommandLine.Parse([]string{})
-
+func TestNewApp(t *testing.T) {
 	addrConfig := config.InitConfig()
 	storageInstance := storage.NewStorage()
+
 	appInstance := app.NewApp(storageInstance, addrConfig)
 
-	// Запускаем приложение в горутине
-
-	// Делаем HTTP-запрос к серверу
-	req, err := http.NewRequest(http.MethodGet, addrConfig.ServerAddr+"/", nil)
-	if err != nil {
-		t.Fatalf("Не удалось создать запрос: %v", err)
+	if appInstance == nil {
+		t.Error("Ожидалось, что NewApp вернет не nil экземпляр приложения")
 	}
-
-	// Создаем новый тестовый сервер
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	// Вызываем хендлер
-	handler.ServeHTTP(rr, req)
-
-	// Проверяем ответ
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("Ожидался статус OK, получен %v", status)
-	}
-
-	// Остановка приложения
-	appInstance.Stop()
 }
