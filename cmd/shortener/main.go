@@ -46,7 +46,7 @@ func main() {
 	// Создаем маршрутизатор Gin
 	router := gin.Default()
 
-	// Инициализация маршрутов через приложение
+	// Инициализация маршрутов через приложение (например, appInstance.RegisterRoutes(router))
 
 	// Создаем HTTP сервер
 	server := &http.Server{
@@ -54,10 +54,12 @@ func main() {
 		Handler: router,
 	}
 
-	// Запуск pprof сервера на порту 6060
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
+	// Запуск pprof сервера на порту 6060, если включен флаг
+	if addrConfig.EnablePprof == "true" {
+		go func() {
+			log.Println(http.ListenAndServe("localhost:6060", nil))
+		}()
+	}
 
 	// Запуск основного HTTP-сервера
 	go func() {

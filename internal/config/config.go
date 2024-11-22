@@ -57,6 +57,9 @@ func mergeConfigs(base, fileConfig *Config) *Config {
 	if fileConfig.DBPath != "" {
 		base.DBPath = fileConfig.DBPath
 	}
+	if fileConfig.EnablePprof != "" {
+		base.EnablePprof = fileConfig.EnablePprof
+	}
 	if fileConfig.EnableHTTPS {
 		base.EnableHTTPS = fileConfig.EnableHTTPS
 	}
