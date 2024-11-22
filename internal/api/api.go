@@ -73,12 +73,12 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 	)
 
 	api.SetRoutes(r)
+
 	// Мы ожидаем ошибку от startServer
 	return startServer(ServerAddr, r)
 }
 
 func startServer(ServerAddr string, r *gin.Engine) error {
-
 	server := &http.Server{
 		Addr:    ServerAddr,
 		Handler: r,
