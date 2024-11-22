@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/gin-gonic/gin"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -274,4 +276,25 @@ func (s *RestAPI) DeleteUserUrls(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(code)
+}
+
+func (s *RestAPI) StatsHandler(c *gin.Context) {
+	addrConfig := config.InitConfig()
+	trustedSubnet := addrConfig.TrustedSubnet
+	clientIP := c.GetHeader("X-Real-IP")
+
+	if trustedSubnet != "" {
+		_, cidr, err := net.ParseCIDR(trustedSubnet)
+		if err != nil || !cidr.Contains(net.ParseIP(clientIP)) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			return
+		}
+	}
+
+	stats := map[string]int{
+		// "urls":  s.Shortener.GetURLCount(),
+		// "users": s.Shortener.GetUserCount(),
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

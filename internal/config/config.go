@@ -12,16 +12,17 @@ import (
 
 // Config представляет собой структуру для хранения конфигурационных параметров приложения.
 type Config struct {
-	ServerAddr  string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес и порт сервера
-	BaseURL     string `env:"BASE_URL" json:"base_url"`                   // Базовый URL
-	LogLevel    string `env:"FLAG_LOG_LEVEL" json:"-"`                    // Уровень логирования (только флаг или env)
-	FilePath    string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для хранения
-	DBPath      string `env:"DB_PATH" json:"database_dsn"`                // Путь к базе данных
-	EnablePprof string `env:"ENABLE_PPROF" json:"-"`                      // Включить pprof (только флаг или env)
-	EnableHTTPS bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // Включить HTTPS
-	CertFile    string `env:"CERT_FILE" json:"-"`                         // Путь к файлу сертификата (только флаг или env)
-	KeyFile     string `env:"KEY_FILE" json:"-"`                          // Путь к файлу ключа (только флаг или env)
-	ConfigPath  string `env:"CONFIG" json:"-"`                            // Путь к файлу конфигурации (только флаг или env)
+	ServerAddr    string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес и порт сервера
+	BaseURL       string `env:"BASE_URL" json:"base_url"`                   // Базовый URL
+	LogLevel      string `env:"FLAG_LOG_LEVEL" json:"-"`                    // Уровень логирования (только флаг или env)
+	FilePath      string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для хранения
+	DBPath        string `env:"DB_PATH" json:"database_dsn"`                // Путь к базе данных
+	EnablePprof   string `env:"ENABLE_PPROF" json:"-"`                      // Включить pprof (только флаг или env)
+	EnableHTTPS   bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // Включить HTTPS
+	CertFile      string `env:"CERT_FILE" json:"-"`                         // Путь к файлу сертификата (только флаг или env)
+	KeyFile       string `env:"KEY_FILE" json:"-"`                          // Путь к файлу ключа (только флаг или env)
+	ConfigPath    string `env:"CONFIG" json:"-"`                            // Путь к файлу конфигурации (только флаг или env)
+	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 var once sync.Once
@@ -92,6 +93,7 @@ func InitConfig() *Config {
 		flag.StringVar(&config.CertFile, "cert", config.CertFile, "path to the SSL certificate file")
 		flag.StringVar(&config.KeyFile, "key", config.KeyFile, "path to the SSL key file")
 		flag.StringVar(&config.ConfigPath, "config", config.ConfigPath, "path to config file")
+		flag.StringVar(&config.TrustedSubnet, "t", config.TrustedSubnet, "доверенная подсеть в формате CIDR")
 		flag.Parse() // Парсим флаги командной строки
 	})
 
