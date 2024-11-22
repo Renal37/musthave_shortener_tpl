@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
@@ -18,10 +17,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// RestAPI представляет API для обработки запросов на сокращение URL.
-// Содержит методы для настройки маршрутов и взаимодействия с сервисами.
+// RestAPI представляет собой структуру для REST API.
 type RestAPI struct {
-	Shortener *services.ShortenerService
+	Shortener *services.ShortenerService // Сервис для сокращения URL.
 }
 
 // StartRestAPI запускает HTTP-сервер REST API для обработки запросов сокращения URL.
@@ -53,25 +51,20 @@ type RestAPI struct {
 // BUG(Автор): Текущее логирование ограничено уровнем info; более детализированные уровни требуют дальнейшей настройки.
 // BUG(Автор): В конфигурации сервера может отсутствовать поддержка HTTPS.
 func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
-	// Инициализация логгера с заданным уровнем логирования
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
 	}
 
 	logger.Log.Info("Running server", zap.String("address", ServerAddr))
-
-	// Создание сервиса сокращения URL
 	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 
 	api := &RestAPI{
 		Shortener: storageShortener,
 	}
 
-	// Настройка режима работы Gin
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	// Подключение middleware
 	r.Use(
 		gin.Recovery(),
 		middleware.LoggerMiddleware(logger.Log),
@@ -79,54 +72,35 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 		middleware.AuthorizationMiddleware(),
 	)
 
-	// Установка маршрутов
 	api.SetRoutes(r)
 
-	// Запуск HTTP-сервера
+	// Мы ожидаем ошибку от startServer
 	return startServer(ServerAddr, r)
 }
 
-// startServer запускает HTTP-сервер и обеспечивает его корректное завершение при получении сигнала остановки.
-//
-// Параметры:
-//   - ServerAddr: Адрес, на котором запускается сервер.
-//   - r: Конфигурированный роутер Gin.
-//
-// Сервер завершается корректно, выполняя сохранение данных и освобождение ресурсов.
 func startServer(ServerAddr string, r *gin.Engine) error {
 	server := &http.Server{
 		Addr:    ServerAddr,
 		Handler: r,
 	}
 
-	// Создание нового экземпляра хранилища
-	// storageInstance := storage.NewStorage()
-
-	// Канал для получения системных сигналов
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	signal.Notify(quit, os.Interrupt)
 
-	// Запуск сервера в отдельной горутине
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("Ошибка при запуске сервера: %v", err)
+			log.Printf("Ошибка при запуске сервера: %v", err) // Меняем на log.Printf
 		}
 	}()
 
-	// Ожидание сигнала завершения
 	<-quit
-	log.Println("Получен сигнал завершения, остановка сервера...")
-
-	// Контекст с тайм-аутом для корректного завершения
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Завершение работы сервера
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Ошибка при остановке сервера: %v", err)
-		return err
+		log.Printf("Ошибка при остановке сервера: %v\n", err)
+		return err // Возвращаем ошибку
 	}
 
-	log.Println("Сервер успешно остановлен.")
 	return nil
 }
