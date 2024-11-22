@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
@@ -17,9 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// RestAPI представляет собой структуру для REST API.
 type RestAPI struct {
-	Shortener *services.ShortenerService // Сервис для сокращения URL.
+	Shortener *services.ShortenerService
 }
 
 // StartRestAPI запускает HTTP-сервер REST API для обработки запросов сокращения URL.
@@ -73,34 +73,42 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 	)
 
 	api.SetRoutes(r)
-
 	// Мы ожидаем ошибку от startServer
 	return startServer(ServerAddr, r)
 }
 
 func startServer(ServerAddr string, r *gin.Engine) error {
+
 	server := &http.Server{
 		Addr:    ServerAddr,
 		Handler: r,
 	}
-
+	storageInstance := storage.NewStorage()
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("Ошибка при запуске сервера: %v", err) // Меняем на log.Printf
+			log.Printf("Ошибка при запуске сервера: %v", err)
 		}
 	}()
 
 	<-quit
+	log.Println("Получен сигнал завершения, остановка сервера...")
+
+	// Сохранение данных перед завершением
+	if err := storageInstance; err != nil {
+		log.Printf("Ошибка при сохранении данных: %v", err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Ошибка при остановке сервера: %v\n", err)
-		return err // Возвращаем ошибку
+		log.Printf("Ошибка при остановке сервера: %v", err)
+		return err
 	}
 
+	log.Println("Сервер успешно остановлен.")
 	return nil
 }
