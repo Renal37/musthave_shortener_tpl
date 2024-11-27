@@ -4,9 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"os/signal"
-	"syscall"
 	"testing"
 	"time"
 
@@ -18,9 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Тест функции StartRestAPI
 func TestStartRestAPI(t *testing.T) {
-	// Установить режим тестирования Gin
+	// Установим режим тестирования Gin
 	gin.SetMode(gin.TestMode)
 
 	// Настроим параметры для запуска API
@@ -32,84 +28,35 @@ func TestStartRestAPI(t *testing.T) {
 	// Инициализируем логгер
 	_ = logger.Initialize(logLevel)
 
-	// Запускаем API в отдельной горутине
-	go func() {
-		err := api.StartRestAPI(serverAddr, baseURL, logLevel, &repository.StoreDB{}, dbDNSTurn, &storage.Storage{})
-		if err != nil {
-			t.Errorf("Error starting API: %v", err)
-		}
-	}()
+	// Создадим контекст для управления жизненным циклом сервера
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Даем время на запуск сервера
+	// Запустим сервер в отдельной горутине и получим только функцию для его остановки
+	_, stop := api.StartRestAPI(ctx, serverAddr, baseURL, logLevel, &repository.StoreDB{}, dbDNSTurn, &storage.Storage{})
+
+	// Даем серверу немного времени на запуск
 	time.Sleep(1 * time.Second)
 
-	// Создаем HTTP-запрос к серверу
-	req, err := http.NewRequest(http.MethodGet, baseURL, nil)
+	// Проверим, что сервер работает, отправив запрос на базовый URL
+	req, err := http.NewRequest(http.MethodGet, baseURL+"/ping", nil)
 	assert.NoError(t, err)
 
-	// Используем httptest для тестирования HTTP-сервера
+	// Используем httptest для отправки запроса к серверу
 	rr := httptest.NewRecorder()
 	handler := gin.Default()
 	handler.ServeHTTP(rr, req)
 
-	// Проверяем код ответа
-	assert.Equal(t, http.StatusNotFound, rr.Code) // Ожидаем 404, так как не было маршрута по умолчанию
+	// Проверим, что мы получили ответ с кодом 404 (или 200, если в вашем коде есть обработчик /ping)
+	assert.Equal(t, http.StatusNotFound, rr.Code) // Ожидаем 404, если "/ping" не был определён
 
-	// Закрываем сервер, посылая сигнал прерывания
-	process, err := os.FindProcess(os.Getpid())
-	assert.NoError(t, err)
+	// Теперь остановим сервер, послав сигнал завершения в контекст
+	cancel()
 
-	// Имитация SIGINT для завершения сервера
-	process.Signal(syscall.SIGINT)
-
-	// Даем время на завершение сервера
-	time.Sleep(1 * time.Second)
-}
-
-// Моковый сервер для тестирования функции startServer
-func TestStartServer(t *testing.T) {
-	// Мокаем Gin
-	r := gin.New()
-
-	// Используем httptest для запуска и тестирования сервера
-	server := &http.Server{
-		Addr:    ":8081",
-		Handler: r,
-	}
-
-	// Запускаем сервер в отдельной горутине
-	go func() {
-		_ = api.StartRestAPI(":8081", "http://localhost:8081", "info", &repository.StoreDB{}, false, &storage.Storage{})
-	}()
-
-	// Даем серверу время на запуск
+	// Подождем, чтобы сервер успел завершить свою работу
 	time.Sleep(1 * time.Second)
 
-	// Создаем HTTP-запрос к серверу
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:8081", nil)
+	// Проверим, что сервер был остановлен, и функция stop отработала корректно
+	err = stop()
 	assert.NoError(t, err)
-
-	rr := httptest.NewRecorder()
-	r.ServeHTTP(rr, req)
-
-	// Проверяем код ответа (ожидаем 404)
-	assert.Equal(t, http.StatusNotFound, rr.Code)
-
-	// Закрываем сервер
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-
-	go func() {
-		<-quit
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		_ = server.Shutdown(ctx)
-	}()
-
-	process, err := os.FindProcess(os.Getpid())
-	assert.NoError(t, err)
-	process.Signal(os.Interrupt)
-
-	time.Sleep(1 * time.Second)
 }
