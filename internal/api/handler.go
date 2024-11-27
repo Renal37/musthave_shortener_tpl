@@ -291,9 +291,21 @@ func (s *RestAPI) StatsHandler(c *gin.Context) {
 		}
 	}
 
+	urlCount, err := s.Shortener.GetURLCount()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch URL count"})
+		return
+	}
+
+	userCount, err := s.Shortener.GetUserCount()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch user count"})
+		return
+	}
+
 	stats := map[string]int{
-		// "urls":  s.Shortener.GetURLCount(),
-		// "users": s.Shortener.GetUserCount(),
+		"urls":  urlCount,
+		"users": userCount,
 	}
 
 	c.JSON(http.StatusOK, stats)

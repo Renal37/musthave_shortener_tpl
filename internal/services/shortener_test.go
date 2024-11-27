@@ -31,7 +31,10 @@ func (m *MockStore) Get(shortID, originalURL string) (string, error) {
 
 func (m *MockStore) GetFull(userID, BaseURL string) ([]map[string]string, error) {
 	args := m.Called(userID, BaseURL)
-	return args.Get(0).([]map[string]string), args.Error(1)
+	if urls, ok := args.Get(0).([]map[string]string); ok {
+		return urls, args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *MockStore) DeleteURLs(userID, shortURL string, updateChan chan<- string) error {
@@ -55,18 +58,18 @@ func (m *MockRepository) Get(shortID string) (string, bool) {
 
 // Тест для метода Set (позитивный сценарий)
 func TestShortenerService_Set(t *testing.T) {
-	mockRepo := new(MockRepository) // Создаем мок для Repository
-	mockStore := new(MockStore)     // Создаем мок для Store
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
 
 	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
 
-	mockStore.On("Create", "https://example.com", mock.Anything, "user1").Return(nil)
+	mockStore.On("Create", "https://example.com", mock.AnythingOfType("string"), "user1").Return(nil)
 
 	shortURL, err := service.Set("user1", "https://example.com")
 
 	assert.NoError(t, err)
 	assert.Contains(t, shortURL, "http://localhost/")
-	mockStore.AssertCalled(t, "Create", "https://example.com", mock.Anything, "user1")
+	mockStore.AssertCalled(t, "Create", "https://example.com", mock.AnythingOfType("string"), "user1")
 }
 
 // Тест для метода Set с ошибкой
@@ -76,19 +79,19 @@ func TestShortenerService_Set_Error(t *testing.T) {
 
 	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
 
-	mockStore.On("Create", "https://example.com", mock.Anything, "user1").Return(errors.New("database error"))
+	mockStore.On("Create", "https://example.com", mock.AnythingOfType("string"), "user1").Return(errors.New("database error"))
 
 	shortURL, err := service.Set("user1", "https://example.com")
 
 	assert.Error(t, err)
 	assert.Empty(t, shortURL)
-	mockStore.AssertCalled(t, "Create", "https://example.com", mock.Anything, "user1")
+	mockStore.AssertCalled(t, "Create", "https://example.com", mock.AnythingOfType("string"), "user1")
 }
 
 // Тест для метода Get через кэш
 func TestShortenerService_Get_FromCache(t *testing.T) {
-	mockRepo := new(MockRepository) // Создаем мок для Repository
-	mockStore := new(MockStore)     // Создаем мок для Store
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
 
 	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, false)
 
@@ -103,8 +106,8 @@ func TestShortenerService_Get_FromCache(t *testing.T) {
 
 // Тест для метода Get с ошибкой при извлечении из базы данных
 func TestShortenerService_Get_Error(t *testing.T) {
-	mockRepo := new(MockRepository) // Создаем мок для Repository
-	mockStore := new(MockStore)     // Создаем мок для Store
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
 
 	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
 
@@ -117,7 +120,7 @@ func TestShortenerService_Get_Error(t *testing.T) {
 	mockStore.AssertCalled(t, "Get", "short123", "")
 }
 
-// Тест для метода Ping (позитивный сценарий)
+// Тест для метода Ping
 func TestShortenerService_Ping(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockStore := new(MockStore)
