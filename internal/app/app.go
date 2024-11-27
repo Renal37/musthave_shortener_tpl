@@ -35,7 +35,7 @@ func (a *App) Start() error {
 	db, err := repository.InitDatabase(a.config.DBPath)
 	if err != nil {
 		fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
-		return err
+		return nil
 	}
 
 	dbDNSTurn := true
@@ -43,40 +43,44 @@ func (a *App) Start() error {
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			fmt.Printf("Ошибка при заполнении хранилища: %v\n", err)
-			return err
+			return nil
 		}
 		dbDNSTurn = false
 	}
 
-	// Контекст для завершения приложения
+	// Контекст для завершения работы приложения
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Канал для получения системных сигналов
 	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	// Запуск API
-	apiServer, apiShutdown := api.StartRestAPI(ctx, a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
-	a.apiShutdown = apiShutdown
+	// Канал для завершения API
+	apiDone := make(chan error, 1)
 
-	// Ожидаем сигнал завершения
-	select {
-	case sig := <-signalChan:
+	// Запускаем REST API
+	go func() {
+		err := api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
+		apiDone <- err
+	}()
+
+	// Обработка сигналов завершения
+	go func() {
+		sig := <-signalChan
 		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
 		cancel()
+		a.Stop()
+	}()
+
+	// Ожидание завершения API или получения ошибки
+	select {
 	case <-ctx.Done():
 		fmt.Println("Контекст завершён")
-	}
-
-	// Остановка приложения
-	if err := a.Stop(); err != nil {
-		return err
-	}
-
-	// Остановка API
-	if err := apiServer.Shutdown(ctx); err != nil {
-		return fmt.Errorf("ошибка завершения API сервера: %w", err)
+	case err := <-apiDone:
+		if err != nil {
+			fmt.Printf("Ошибка при запуске REST API: %v\n", err)
+		}
 	}
 
 	return nil
@@ -88,15 +92,14 @@ func (a *App) UseDatabase() bool {
 }
 
 // Stop останавливает приложение: сохраняет данные из хранилища в файл.
-func (a *App) Stop() error {
+func (a *App) Stop() {
 	fmt.Println("Сохраняем данные перед завершением работы...")
 	if a.UseDatabase() {
 		err := dump.Set(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			fmt.Printf("Ошибка при сохранении данных: %v\n", err)
-			return err
+		} else {
+			fmt.Println("Данные успешно сохранены.")
 		}
-		fmt.Println("Данные успешно сохранены.")
 	}
-	return nil
 }
