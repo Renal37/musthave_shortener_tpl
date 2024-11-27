@@ -4,8 +4,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"time"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
@@ -28,31 +26,18 @@ type RestAPI struct {
 // для работы с короткими ссылками, а также обеспечивает автоматическое логирование запросов и управление авторизацией.
 //
 // Параметры:
+//   - ctx: Контекст для управления жизненным циклом сервера.
 //   - ServerAddr: Адрес для запуска сервера, например, ":8080".
 //   - BaseURL: Базовый URL сервиса сокращения ссылок.
 //   - LogLevel: Уровень логирования, например, "info" или "debug".
-//   - db: Объект StoreDB для хранения данных в базе (предполагается реализация интерфейса базы данных).
+//   - db: Объект StoreDB для хранения данных в базе.
 //   - dbDNSTurn: Логический флаг, указывающий, использовать ли DNS-трансляцию для базы данных.
-//   - storage: Объект Storage для хранения данных (предполагается реализация интерфейса хранилища).
+//   - storage: Объект Storage для хранения данных.
 //
-// Пример использования:
-//
-//	go func() {
-//	    err := StartRestAPI(":8080", "http://example.com", "info", db, false, storage)
-//	    if err != nil {
-//	        log.Fatalf("Ошибка запуска API: %v", err)
-//	    }
-//	}()
-//
-// Известные ограничения:
-//   - Если сервер запущен, его завершение произойдет при получении сигнала остановки от системы.
-//   - Время завершения при остановке ограничено 5 секундами (по умолчанию).
-//
-// BUG(Автор): Текущее логирование ограничено уровнем info; более детализированные уровни требуют дальнейшей настройки.
-// BUG(Автор): В конфигурации сервера может отсутствовать поддержка HTTPS.
-func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
+// Возвращает указатель на HTTP-сервер и функцию завершения API.
+func StartRestAPI(ctx context.Context, ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) (*http.Server, func() error) {
 	if err := logger.Initialize(LogLevel); err != nil {
-		return err
+		log.Fatalf("Ошибка инициализации логгера: %v", err)
 	}
 
 	logger.Log.Info("Running server", zap.String("address", ServerAddr))
@@ -74,33 +59,21 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 
 	api.SetRoutes(r)
 
-	// Мы ожидаем ошибку от startServer
-	return startServer(ServerAddr, r)
-}
-
-func startServer(ServerAddr string, r *gin.Engine) error {
 	server := &http.Server{
 		Addr:    ServerAddr,
 		Handler: r,
 	}
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-
+	// Горутинa для остановки сервера по завершению контекста
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("Ошибка при запуске сервера: %v", err) // Меняем на log.Printf
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			logger.Log.Error("Ошибка остановки сервера", zap.Error(err))
 		}
 	}()
 
-	<-quit
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("Ошибка при остановке сервера: %v\n", err)
-		return err // Возвращаем ошибку
-	}
-
-	return nil
+	return server, server.Close
 }
