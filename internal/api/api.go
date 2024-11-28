@@ -2,12 +2,7 @@ package api
 
 import (
 	"context"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
-
+	"fmt"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -15,6 +10,11 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
 // RestAPI представляет собой структуру для REST API.
@@ -50,7 +50,8 @@ type RestAPI struct {
 //
 // BUG(Автор): Текущее логирование ограничено уровнем info; более детализированные уровни требуют дальнейшей настройки.
 // BUG(Автор): В конфигурации сервера может отсутствовать поддержка HTTPS.
-func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
+
+func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
 	}
@@ -74,10 +75,33 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 
 	api.SetRoutes(r)
 
-	// Мы ожидаем ошибку от startServer
-	return startServer(ServerAddr, r)
-}
+	// Create an HTTP server
+	srv := &http.Server{
+		Addr:    ServerAddr,
+		Handler: r,
+	}
 
+	// Start the server in a goroutine
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	// Listen for the context cancellation and shutdown the server
+	<-ctx.Done()
+
+	logger.Log.Info("Shutting down server...")
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server shutdown failed: %w", err)
+	}
+
+	logger.Log.Info("Server exited properly")
+	return nil
+}
 func startServer(ServerAddr string, r *gin.Engine) error {
 	server := &http.Server{
 		Addr:    ServerAddr,
