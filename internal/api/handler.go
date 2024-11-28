@@ -61,6 +61,11 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 		return
 	}
 
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		c.String(http.StatusBadRequest, "Неверный формат URL")
+		return
+	}
+
 	shortURL, err := s.Shortener.Set(userID, url)
 	if err != nil {
 		shortURL, err = s.Shortener.GetExistURL(url, err)
