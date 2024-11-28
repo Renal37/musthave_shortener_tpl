@@ -70,7 +70,7 @@ func main() {
 		// Создание HTTPS сервера
 		server := &http.Server{
 			Addr:      addrConfig.ServerAddr,
-			// Handler:   r,
+			Handler:   r,
 			TLSConfig: tlsConfig,
 		}
 
