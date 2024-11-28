@@ -2,11 +2,12 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
+	// "github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	// "github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -37,9 +38,18 @@ func main() {
 	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Printf("Build commit: %s\n", buildCommit)
 
+	// Обработка флага -s
+	enableHTTPS := flag.Bool("s", false, "Enable HTTPS")
+	flag.Parse()
+
+	// Проверка переменной окружения ENABLE_HTTPS
+	if envHTTPS := os.Getenv("ENABLE_HTTPS"); envHTTPS == "true" {
+		*enableHTTPS = true
+	}
+
 	addrConfig := config.InitConfig()                      // Инициализация конфигурации
-	storageInstance := storage.NewStorage()                // Создание хранилища
-	appInstance := app.NewApp(storageInstance, addrConfig) // Создание приложения
+	// storageInstance := storage.NewStorage()                // Создание хранилища
+	// appInstance := app.NewApp(storageInstance, addrConfig) // Создание приложения
 
 	// Запуск pprof сервера на порту 6060, если включен флаг
 	if addrConfig.EnablePprof == "true" {
@@ -64,27 +74,35 @@ func main() {
 	certFile := "server.crt"
 	keyFile := "server.key"
 
-	if _, err := os.Stat(certFile); os.IsNotExist(err) {
-		log.Fatalf("Certificate file %s does not exist", certFile)
+	if *enableHTTPS {
+		if _, err := os.Stat(certFile); os.IsNotExist(err) {
+			log.Fatalf("Certificate file %s does not exist", certFile)
+		}
+
+		if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+			log.Fatalf("Key file %s does not exist", keyFile)
+		}
+
+		// Создание HTTPS сервера
+		server := &http.Server{
+			Addr:      addrConfig.ServerAddr,
+			Handler:   r, // Используем gin.Engine в качестве обработчика
+			TLSConfig: tlsConfig,
+		}
+
+		// Запуск HTTPS сервера
+		err := server.ListenAndServeTLS(certFile, keyFile)
+		if err != nil {
+			log.Fatalf("Error starting HTTPS server: %v", err)
+		}
+	} else {
+		// Запуск HTTP сервера
+		err := http.ListenAndServe(addrConfig.ServerAddr, r)
+		if err != nil {
+			log.Fatalf("Error starting HTTP server: %v", err)
+		}
 	}
 
-	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-		log.Fatalf("Key file %s does not exist", keyFile)
-	}
-
-	// Создание HTTPS сервера
-	server := &http.Server{
-		Addr:      addrConfig.ServerAddr,
-		Handler:   r, // Используем gin.Engine в качестве обработчика
-		TLSConfig: tlsConfig,
-	}
-
-	// Запуск HTTPS сервера
-	err := server.ListenAndServeTLS(certFile, keyFile)
-	if err != nil {
-		log.Fatalf("Error starting HTTPS server: %v", err)
-	}
-
-	appInstance.Start()
-	appInstance.Stop()
+	// appInstance.Start()
+	// appInstance.Stop()
 }
