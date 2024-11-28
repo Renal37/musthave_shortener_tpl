@@ -18,7 +18,6 @@ import (
 type App struct {
 	storageInstance *storage.Storage // Указатель на хранилище
 	config          *config.Config   // Указатель на конфигурацию
-	apiShutdown     func() error     // Функция для завершения REST API
 }
 
 // NewApp создает новый экземпляр приложения с заданным хранилищем и конфигурацией.
@@ -35,7 +34,7 @@ func (a *App) Start() error {
 	db, err := repository.InitDatabase(a.config.DBPath)
 	if err != nil {
 		fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
-		return nil
+		return err
 	}
 
 	dbDNSTurn := true
@@ -43,7 +42,7 @@ func (a *App) Start() error {
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			fmt.Printf("Ошибка при заполнении хранилища: %v\n", err)
-			return nil
+			return err
 		}
 		dbDNSTurn = false
 	}
@@ -59,9 +58,9 @@ func (a *App) Start() error {
 	// Канал для завершения API
 	apiDone := make(chan error, 1)
 
-	// Запускаем REST API
+	// Запускаем REST API с контекстом
 	go func() {
-		err := api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
+		err := api.StartRestAPI(ctx, a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
 		apiDone <- err
 	}()
 
@@ -70,7 +69,6 @@ func (a *App) Start() error {
 		sig := <-signalChan
 		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
 		cancel()
-		a.Stop()
 	}()
 
 	// Ожидание завершения API или получения ошибки
@@ -83,6 +81,7 @@ func (a *App) Start() error {
 		}
 	}
 
+	a.Stop()
 	return nil
 }
 
