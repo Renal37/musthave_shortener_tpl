@@ -36,22 +36,27 @@ type ResponseBodyURLs struct {
 // ShortenURLHandler обрабатывает запросы на сокращение URL, переданного в теле запроса в виде строки.
 // Возвращает сокращенный URL. Если URL уже существует, возвращает имеющийся сокращенный URL
 // со статусом 409 Conflict.
+
 func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	httpStatus := http.StatusCreated
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса", http.StatusInternalServerError)
+		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса")
 		return
 	}
-	userIDFromContext, _ := c.Get("userID")
-	userID, _ := userIDFromContext.(string)
+	userIDFromContext, exists := c.Get("userID")
+	if !exists {
+		c.String(http.StatusInternalServerError, "Не удалось получить userID")
+		return
+	}
+	userID := userIDFromContext.(string)
 
 	url := strings.TrimSpace(string(body))
 	shortURL, err := s.Shortener.Set(userID, url)
 	if err != nil {
 		shortURL, err = s.Shortener.GetExistURL(url, err)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Не удалось сократить URL", http.StatusInternalServerError)
+			c.String(http.StatusInternalServerError, "Не удалось сократить URL")
 			return
 		}
 		httpStatus = http.StatusConflict

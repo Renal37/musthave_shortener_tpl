@@ -11,30 +11,26 @@ import (
 	"strings"
 )
 
-// Store определяет интерфейс взаимодействия с хранилищем URL.
 type Store interface {
-	PingStore() error                                                          // Проверяет соединение с хранилищем
-	Create(originalURL, shortURL, UserID string) error                         // Создаёт новую запись URL
-	Get(shortID string, originalURL string) (string, error)                    // Извлекает оригинальный URL по сокращенному
-	GetFull(userID string, BaseURL string) ([]map[string]string, error)        // Извлекает все URL пользователя
-	DeleteURLs(userID string, shortURL string, updateChan chan<- string) error // Удаляет URL
+	PingStore() error
+	Create(originalURL, shortURL, UserID string) error
+	Get(shortID string, originalURL string) (string, error)
+	GetFull(userID string, BaseURL string) ([]map[string]string, error)
+	DeleteURLs(userID string, shortURL string, updateChan chan<- string) error
 }
 
-// Repository определяет интерфейс для работы с кэшем.
 type Repository interface {
-	Set(shortID string, originalURL string) // Сохраняет URL в кэш
-	Get(shortID string) (string, bool)      // Извлекает URL из кэша
+	Set(shortID string, originalURL string)
+	Get(shortID string) (string, bool)
 }
 
-// ShortenerService предоставляет функционал для создания и управления короткими ссылками.
 type ShortenerService struct {
-	BaseURL   string     // Базовый URL для генерации коротких ссылок
-	Storage   Repository // Кэш-хранилище ссылок
-	db        Store      // Хранилище данных (БД)
-	dbDNSTurn bool       // Флаг использования БД для хранения ссылок
+	BaseURL   string
+	Storage   Repository
+	db        Store
+	dbDNSTurn bool
 }
 
-// NewShortenerService создаёт и возвращает новый экземпляр сервиса сокращения ссылок.
 func NewShortenerService(BaseURL string, storage Repository, db Store, dbDNSTurn bool) *ShortenerService {
 	if !strings.HasPrefix(BaseURL, "http://") && !strings.HasPrefix(BaseURL, "https://") {
 		logger.Log.Error("Invalid BaseURL, must start with http:// or https://")
@@ -48,18 +44,19 @@ func NewShortenerService(BaseURL string, storage Repository, db Store, dbDNSTurn
 	}
 }
 
-// GetExistURL проверяет наличие ошибки уникальности и возвращает существующую короткую ссылку, если таковая уже имеется.
 func (s *ShortenerService) GetExistURL(originalURL string, err error) (string, error) {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 		shortID, err := s.GetRep("", originalURL)
+		if err != nil {
+			return "", err
+		}
 		shortURL := fmt.Sprintf("%s/%s", s.BaseURL, shortID)
-		return shortURL, err
+		return shortURL, nil
 	}
 	return "", err
 }
 
-// Set генерирует короткую ссылку для заданного originalURL и сохраняет её в хранилище.
 func (s *ShortenerService) Set(userID, originalURL string) (string, error) {
 	if s.db == nil && s.Storage == nil {
 		return "", errors.New("database and storage are not initialized")
@@ -77,12 +74,10 @@ func (s *ShortenerService) Set(userID, originalURL string) (string, error) {
 	return shortURL, nil
 }
 
-// randSeq генерирует уникальный идентификатор (UUID) для короткой ссылки.
 func randSeq() string {
 	return uuid.New().String()
 }
 
-// Get возвращает оригинальный URL, используя короткий идентификатор, проверяя сначала БД, затем кэш.
 func (s *ShortenerService) Get(shortID string) (string, error) {
 	if s.dbDNSTurn {
 		return s.GetRep(shortID, "")
@@ -94,28 +89,39 @@ func (s *ShortenerService) Get(shortID string) (string, error) {
 	return originalURL, nil
 }
 
-// Ping проверяет доступность соединения с базой данных.
 func (s *ShortenerService) Ping() error {
+	if s.db == nil {
+		return errors.New("database not initialized")
+	}
 	return s.db.PingStore()
 }
 
-// CreateRep сохраняет запись URL в базе данных.
 func (s *ShortenerService) CreateRep(originalURL, shortURL, UserID string) error {
+	if s.db == nil {
+		return errors.New("database not initialized")
+	}
 	return s.db.Create(originalURL, shortURL, UserID)
 }
 
-// GetRep извлекает запись из базы данных по короткому или оригинальному URL.
 func (s *ShortenerService) GetRep(shortURL, originalURL string) (string, error) {
+	if s.db == nil {
+		return "", errors.New("database not initialized")
+	}
 	return s.db.Get(shortURL, originalURL)
 }
 
-// GetFullRep извлекает все URL пользователя по userID.
 func (s *ShortenerService) GetFullRep(userID string) ([]map[string]string, error) {
+	if s.db == nil {
+		return nil, errors.New("database not initialized")
+	}
 	return s.db.GetFull(userID, s.BaseURL)
 }
 
-// DeleteURLsRep удаляет несколько URL для пользователя, используя централизованный воркер.
 func (s *ShortenerService) DeleteURLsRep(userID string, shortURLs []string) error {
+	if s.db == nil {
+		return errors.New("database not initialized")
+	}
+
 	updateChan := make(chan string, len(shortURLs))
 	workerChan := make(chan string, len(shortURLs))
 
