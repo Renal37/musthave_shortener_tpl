@@ -3,15 +3,15 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
-	"net/http"
-	_ "net/http/pprof"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
 )
 
 var (
@@ -60,15 +60,27 @@ func main() {
 	apiInstance := &api.RestAPI{} // Создайте экземпляр RestAPI
 	apiInstance.SetRoutes(r)
 
+	// Проверка наличия файлов сертификата и ключа
+	certFile := "server.crt"
+	keyFile := "server.key"
+
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		log.Fatalf("Certificate file %s does not exist", certFile)
+	}
+
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		log.Fatalf("Key file %s does not exist", keyFile)
+	}
+
 	// Создание HTTPS сервера
 	server := &http.Server{
 		Addr:      addrConfig.ServerAddr,
-		// Handler:   r, // Используем gin.Engine в качестве обработчика
+		Handler:   r, // Используем gin.Engine в качестве обработчика
 		TLSConfig: tlsConfig,
 	}
 
 	// Запуск HTTPS сервера
-	err := server.ListenAndServeTLS("server.crt", "server.key")
+	err := server.ListenAndServeTLS(certFile, keyFile)
 	if err != nil {
 		log.Fatalf("Error starting HTTPS server: %v", err)
 	}
