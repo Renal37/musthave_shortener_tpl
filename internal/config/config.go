@@ -19,8 +19,8 @@ type Config struct {
 	DBPath      string `env:"DB_PATH" json:"database_dsn"`                // Путь к базе данных
 	EnablePprof string `env:"ENABLE_PPROF" json:"-"`                      // Включить pprof (только флаг или env)
 	EnableHTTPS bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // Включить HTTPS
-	CertFile    string `env:"CERT_FILE" json:"-"`                         // Путь к файлу сертификата (только флаг или env)
-	KeyFile     string `env:"KEY_FILE" json:"-"`                          // Путь к файлу ключа (только флаг или env)
+	CertFile    string `env:"CERT_FILE" json:"cert_file"`                 // Путь к файлу сертификата
+	KeyFile     string `env:"KEY_FILE" json:"key_file"`                   // Путь к файлу ключа
 	ConfigPath  string `env:"CONFIG" json:"-"`                            // Путь к файлу конфигурации (только флаг или env)
 }
 
@@ -62,6 +62,12 @@ func mergeConfigs(base, fileConfig *Config) *Config {
 	}
 	if fileConfig.EnableHTTPS {
 		base.EnableHTTPS = fileConfig.EnableHTTPS
+	}
+	if fileConfig.CertFile != "" {
+		base.CertFile = fileConfig.CertFile
+	}
+	if fileConfig.KeyFile != "" {
+		base.KeyFile = fileConfig.KeyFile
 	}
 	return base
 }
