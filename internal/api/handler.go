@@ -49,7 +49,11 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Не удалось получить userID")
 		return
 	}
-	userID := userIDFromContext.(string)
+	userID, ok := userIDFromContext.(string)
+	if !ok {
+		c.String(http.StatusInternalServerError, "Неверный формат userID")
+		return
+	}
 
 	url := strings.TrimSpace(string(body))
 	shortURL, err := s.Shortener.Set(userID, url)
