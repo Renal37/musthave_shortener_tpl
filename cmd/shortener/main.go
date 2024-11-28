@@ -2,12 +2,9 @@ package main
 
 import (
 	"crypto/tls"
-	"flag"
 	"fmt"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
-	// "github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
-	// "github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -15,94 +12,84 @@ import (
 	"os"
 )
 
-var (
-	buildVersion string // Версия сборки
-	buildDate    string // Дата сборки
-	buildCommit  string // Хэш коммита
-)
-
 func main() {
-	// Если переменные не были переданы при компиляции, выводим "N/A"
-	if buildVersion == "" {
-		buildVersion = "N/A"
-	}
-	if buildDate == "" {
-		buildDate = "N/A"
-	}
-	if buildCommit == "" {
-		buildCommit = "N/A"
+	// Вывод информации о сборке
+	printBuildInfo()
+
+	// Инициализация конфигурации
+	cfg := config.InitConfig()
+
+	// Запуск pprof, если включен
+	if cfg.EnablePprof == "true" {
+		go startPprofServer()
 	}
 
-	// Выводим информацию о сборке
+	// Создаем маршруты
+	router := gin.Default()
+	apiInstance := &api.RestAPI{}
+	apiInstance.SetRoutes(router)
+
+	// Запускаем сервер
+	if cfg.EnableHTTPS {
+		startHTTPSServer(cfg, router)
+	} else {
+		startHTTPServer(cfg, router)
+	}
+}
+
+// printBuildInfo выводит информацию о версии сборки
+func printBuildInfo() {
+	buildVersion := getEnvOrDefault("BUILD_VERSION", "N/A")
+	buildDate := getEnvOrDefault("BUILD_DATE", "N/A")
+	buildCommit := getEnvOrDefault("BUILD_COMMIT", "N/A")
+
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Printf("Build commit: %s\n", buildCommit)
+}
 
-	// Обработка флага -s
-	enableHTTPS := flag.Bool("s", false, "Enable HTTPS")
-	flag.Parse()
+// startPprofServer запускает pprof сервер на порту 6060
+func startPprofServer() {
+	log.Println(http.ListenAndServe("localhost:6060", nil))
+}
 
-	// Проверка переменной окружения ENABLE_HTTPS
-	if envHTTPS := os.Getenv("ENABLE_HTTPS"); envHTTPS == "true" {
-		*enableHTTPS = true
+// startHTTPSServer запускает HTTPS сервер
+func startHTTPSServer(cfg *config.Config, router http.Handler) {
+	checkFileExists(cfg.CertFile, "SSL certificate")
+	checkFileExists(cfg.KeyFile, "SSL key")
+
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	server := &http.Server{
+		Addr:      cfg.ServerAddr,
+		Handler:   router,
+		TLSConfig: tlsConfig,
 	}
 
-	addrConfig := config.InitConfig()                      // Инициализация конфигурации
-	// storageInstance := storage.NewStorage()                // Создание хранилища
-	// appInstance := app.NewApp(storageInstance, addrConfig) // Создание приложения
-
-	// Запуск pprof сервера на порту 6060, если включен флаг
-	if addrConfig.EnablePprof == "true" {
-		go func() {
-			log.Println(http.ListenAndServe("localhost:6060", nil))
-		}()
+	log.Printf("Starting HTTPS server at %s...\n", cfg.ServerAddr)
+	if err := server.ListenAndServeTLS(cfg.CertFile, cfg.KeyFile); err != nil {
+		log.Fatalf("Error starting HTTPS server: %v", err)
 	}
+}
 
-	// Настройка TLS конфигурации
-	tlsConfig := &tls.Config{
-		MinVersion: tls.VersionTLS12,
+// startHTTPServer запускает HTTP сервер
+func startHTTPServer(cfg *config.Config, router http.Handler) {
+	log.Printf("Starting HTTP server at %s...\n", cfg.ServerAddr)
+	if err := http.ListenAndServe(cfg.ServerAddr, router); err != nil {
+		log.Fatalf("Error starting HTTP server: %v", err)
 	}
+}
 
-	// Создание экземпляра gin.Engine
-	r := gin.Default()
-
-	// Настройка маршрутов
-	apiInstance := &api.RestAPI{} // Создайте экземпляр RestAPI
-	apiInstance.SetRoutes(r)
-
-	// Проверка наличия файлов сертификата и ключа
-	certFile := "server.crt"
-	keyFile := "server.key"
-
-	if *enableHTTPS {
-		if _, err := os.Stat(certFile); os.IsNotExist(err) {
-			log.Fatalf("Certificate file %s does not exist", certFile)
-		}
-
-		if _, err := os.Stat(keyFile); os.IsNotExist(err) {
-			log.Fatalf("Key file %s does not exist", keyFile)
-		}
-
-		// Создание HTTPS сервера
-		server := &http.Server{
-			Addr:      addrConfig.ServerAddr,
-			Handler:   r, // Используем gin.Engine в качестве обработчика
-			TLSConfig: tlsConfig,
-		}
-
-		// Запуск HTTPS сервера
-		err := server.ListenAndServeTLS(certFile, keyFile)
-		if err != nil {
-			log.Fatalf("Error starting HTTPS server: %v", err)
-		}
-	} else {
-		// Запуск HTTP сервера
-		err := http.ListenAndServe(addrConfig.ServerAddr, r)
-		if err != nil {
-			log.Fatalf("Error starting HTTP server: %v", err)
-		}
+// checkFileExists проверяет существование файла
+func checkFileExists(path string, description string) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		log.Fatalf("%s file %s does not exist", description, path)
 	}
+}
 
-	// appInstance.Start()
-	// appInstance.Stop()
+// getEnvOrDefault возвращает значение переменной окружения или значение по умолчанию
+func getEnvOrDefault(env, defaultValue string) string {
+	if value := os.Getenv(env); value != "" {
+		return value
+	}
+	return defaultValue
 }
