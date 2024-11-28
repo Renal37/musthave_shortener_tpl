@@ -63,7 +63,7 @@ func main() {
 	// Создание HTTPS сервера
 	server := &http.Server{
 		Addr:      addrConfig.ServerAddr,
-		Handler:   r, // Используем gin.Engine в качестве обработчика
+		// Handler:   r, // Используем gin.Engine в качестве обработчика
 		TLSConfig: tlsConfig,
 	}
 
