@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"go.uber.org/zap"
+	"strings"
 )
 
 // Store определяет интерфейс взаимодействия с хранилищем URL.
@@ -35,6 +36,10 @@ type ShortenerService struct {
 
 // NewShortenerService создаёт и возвращает новый экземпляр сервиса сокращения ссылок.
 func NewShortenerService(BaseURL string, storage Repository, db Store, dbDNSTurn bool) *ShortenerService {
+	if !strings.HasPrefix(BaseURL, "http://") && !strings.HasPrefix(BaseURL, "https://") {
+		logger.Log.Error("Invalid BaseURL, must start with http:// or https://")
+		return nil
+	}
 	return &ShortenerService{
 		BaseURL:   BaseURL,
 		Storage:   storage,
@@ -56,6 +61,10 @@ func (s *ShortenerService) GetExistURL(originalURL string, err error) (string, e
 
 // Set генерирует короткую ссылку для заданного originalURL и сохраняет её в хранилище.
 func (s *ShortenerService) Set(userID, originalURL string) (string, error) {
+	if s.db == nil && s.Storage == nil {
+		return "", errors.New("database and storage are not initialized")
+	}
+
 	shortID := randSeq()
 	if s.dbDNSTurn {
 		if err := s.CreateRep(originalURL, shortID, userID); err != nil {
