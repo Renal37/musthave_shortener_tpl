@@ -40,42 +40,22 @@ func (s *RestAPI) ShortenURLHandler(c *gin.Context) {
 	httpStatus := http.StatusCreated
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса")
+		c.String(http.StatusInternalServerError, "Не удалось прочитать тело запроса", http.StatusInternalServerError)
 		return
 	}
-
-	userIDFromContext, exists := c.Get("userID")
-	if !exists {
-		c.String(http.StatusInternalServerError, "Не удалось получить userID")
-		return
-	}
-	userID, ok := userIDFromContext.(string)
-	if !ok {
-		c.String(http.StatusInternalServerError, "Неверный формат userID")
-		return
-	}
+	userIDFromContext, _ := c.Get("userID")
+	userID, _ := userIDFromContext.(string)
 
 	url := strings.TrimSpace(string(body))
-	if url == "" {
-		c.String(http.StatusBadRequest, "URL не может быть пустым")
-		return
-	}
-
-	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-		c.String(http.StatusBadRequest, "Неверный формат URL")
-		return
-	}
-
 	shortURL, err := s.Shortener.Set(userID, url)
 	if err != nil {
 		shortURL, err = s.Shortener.GetExistURL(url, err)
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Не удалось сократить URL")
+			c.String(http.StatusInternalServerError, "Не удалось сократить URL", http.StatusInternalServerError)
 			return
 		}
 		httpStatus = http.StatusConflict
 	}
-
 	c.Header("Content-Type", "text/plain")
 	c.String(httpStatus, shortURL)
 }
