@@ -58,10 +58,7 @@ func main() {
 	} else {
 		// Запуск HTTP-сервера
 		fmt.Println("Starting server in HTTP mode...")
-		err := http.ListenAndServe(addrConfig.ServerAddr, r)
-		if err != nil {
-			log.Fatalf("Failed to start HTTP server: %v", err)
-		}
+		appInstance.Start()
 	}
 
 	// Завершение работы приложения
