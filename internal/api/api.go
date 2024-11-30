@@ -3,6 +3,12 @@ package api
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -10,11 +16,6 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 )
 
 // RestAPI представляет собой структуру для REST API.
@@ -38,10 +39,10 @@ type RestAPI struct {
 // Возвращает ошибку, если сервер не удалось запустить или корректно завершить.
 func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage, EnableHTTPS bool, CertFile, KeyFile string) error {
 	if err := logger.Initialize(LogLevel); err != nil {
-		return err
+		return fmt.Errorf("ошибка инициализации логгера: %w", err)
 	}
 
-	logger.Log.Info("Running server", zap.String("address", ServerAddr))
+	logger.Log.Info("Запуск сервера", zap.String("address", ServerAddr))
 	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 
 	api := &RestAPI{
@@ -69,30 +70,30 @@ func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db 
 	go func() {
 		var err error
 		if EnableHTTPS {
-			logger.Log.Info("Starting HTTPS server")
+			logger.Log.Info("Запуск HTTPS сервера")
 			err = srv.ListenAndServeTLS(CertFile, KeyFile)
 		} else {
-			logger.Log.Info("Starting HTTP server")
-			err = srv.ListenAndServe()
+			logger.Log.Info("Запуск HTTP сервера")
+			err = srv.ListenAndServeTLS(CertFile, KeyFile)
 		}
 
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			log.Fatalf("Ошибка при запуске сервера: %v\n", err)
 		}
 	}()
 
-	// Ожидаем отмены контекста и завершаем работу сервера
+	// Ожидание завершения работы сервера
 	<-ctx.Done()
 
-	logger.Log.Info("Shutting down server...")
+	logger.Log.Info("Остановка сервера...")
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("server shutdown failed: %w", err)
+		return fmt.Errorf("ошибка при остановке сервера: %w", err)
 	}
 
-	logger.Log.Info("Server exited properly")
+	logger.Log.Info("Сервер успешно остановлен")
 	return nil
 }
 
