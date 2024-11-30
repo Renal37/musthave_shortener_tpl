@@ -3,6 +3,12 @@ package api
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -10,11 +16,6 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 )
 
 // RestAPI представляет собой структуру для REST API.
@@ -68,7 +69,7 @@ func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db 
 
 	// Запускаем сервер в отдельной горутине
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServeTLS("server.crt", "server.key"); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
