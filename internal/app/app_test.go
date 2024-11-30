@@ -15,6 +15,33 @@ type MockConfig struct {
 	LogLevel   string
 }
 
+func TestNewApp(t *testing.T) {
+	// Создаем экземпляры хранилища и конфигурации для теста
+	storageInstance := &storage.Storage{}
+	configInstance := &config.Config{
+		DBPath:      "test_db_path",
+		FilePath:    "test_file_path",
+		ServerAddr:  "localhost:8080",
+		BaseURL:     "http://localhost",
+		LogLevel:    "debug",
+		EnableHTTPS: false,
+		CertFile:    "",
+		KeyFile:     "",
+	}
+
+	// Создаем новое приложение
+	app := NewApp(storageInstance, configInstance)
+
+	// Проверяем, что приложение было инициализировано корректно
+	if app.storageInstance != storageInstance {
+		t.Errorf("Expected storageInstance to be %v, got %v", storageInstance, app.storageInstance)
+	}
+
+	if app.config != configInstance {
+		t.Errorf("Expected config to be %v, got %v", configInstance, app.config)
+	}
+}
+
 // Тест для метода Start с реальным хранилищем
 // Тест для метода Start
 func TestApp_Start(t *testing.T) {
