@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
-	"net/http"
 	_ "net/http/pprof"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
@@ -40,27 +38,8 @@ func main() {
 	storageInstance := storage.NewStorage()
 	appInstance := app.NewApp(storageInstance, addrConfig)
 
-	// Запуск pprof сервера на порту 6060, если включен флаг
-	if addrConfig.EnablePprof == "true" {
-		go func() {
-			log.Println(http.ListenAndServe("localhost:6060", nil))
-		}()
+	// Запуск приложения
+	if err := appInstance.Start(); err != nil {
+		log.Fatalf("Ошибка при запуске приложения: %v", err)
 	}
-	r := gin.Default()
-	// Определяем запуск сервера (HTTP или HTTPS)
-	if addrConfig.EnableHTTPS {
-		// Запуск HTTPS-сервера
-		fmt.Println("Starting server in HTTPS mode...")
-		err := http.ListenAndServeTLS(addrConfig.ServerAddr, addrConfig.CertFile, addrConfig.KeyFile, r)
-		if err != nil {
-			log.Fatalf("Failed to start HTTPS server: %v", err)
-		}
-	} else {
-		// Запуск HTTP-сервера
-		fmt.Println("Starting server in HTTP mode...")
-		appInstance.Start()
-	}
-
-	// Завершение работы приложения
-	appInstance.Stop()
 }

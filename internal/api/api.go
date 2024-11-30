@@ -3,12 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -16,6 +10,11 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
 // RestAPI представляет собой структуру для REST API.
@@ -37,7 +36,7 @@ type RestAPI struct {
 // - storage: Хранилище, используемое сервисом сокращения ссылок.
 //
 // Возвращает ошибку, если сервер не удалось запустить или корректно завершить.
-func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
+func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage, EnableHTTPS bool, CertFile, KeyFile string) error {
 	if err := logger.Initialize(LogLevel); err != nil {
 		return err
 	}
@@ -61,15 +60,23 @@ func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db 
 
 	api.SetRoutes(r)
 
-	// Создаем HTTP сервер
+	// Создаем HTTP или HTTPS сервер
 	srv := &http.Server{
 		Addr:    ServerAddr,
 		Handler: r,
 	}
 
-	// Запускаем сервер в отдельной горутине
 	go func() {
-		if err := srv.ListenAndServeTLS("server.crt", "server.key"); err != nil && err != http.ErrServerClosed {
+		var err error
+		if EnableHTTPS {
+			logger.Log.Info("Starting HTTPS server")
+			err = srv.ListenAndServeTLS(CertFile, KeyFile)
+		} else {
+			logger.Log.Info("Starting HTTP server")
+			err = srv.ListenAndServe()
+		}
+
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()

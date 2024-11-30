@@ -60,7 +60,18 @@ func (a *App) Start() error {
 
 	// Запускаем REST API с контекстом
 	go func() {
-		err := api.StartRestAPI(ctx, a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
+		err := api.StartRestAPI(
+			ctx,
+			a.config.ServerAddr,
+			a.config.BaseURL,
+			a.config.LogLevel,
+			db,
+			dbDNSTurn,
+			a.storageInstance,
+			a.config.EnableHTTPS,
+			a.config.CertFile,
+			a.config.KeyFile,
+		)
 		apiDone <- err
 	}()
 
