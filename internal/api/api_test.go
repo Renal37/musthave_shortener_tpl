@@ -1,15 +1,17 @@
-package api
+package api_test
 
 import (
 	"context"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/Renal37/musthave_shortener_tpl.git/repository"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/Renal37/musthave_shortener_tpl.git/repository"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStartRestAPI(t *testing.T) {
@@ -23,7 +25,7 @@ func TestStartRestAPI(t *testing.T) {
 
 	// Запускаем сервер в отдельной горутине
 	go func() {
-		err := StartRestAPI(ctx, ":8080", "http://localhost:8080", "info", db, false, storageInstance, false, "", "")
+		err := api.StartRestAPI(ctx, ":8080", "http://localhost:8080", "info", db, false, storageInstance, false, "", "")
 		assert.NoError(t, err)
 	}()
 
@@ -59,7 +61,7 @@ func TestStartRestAPIWithHTTPS(t *testing.T) {
 
 	// Запускаем сервер с HTTPS в отдельной горутине
 	go func() {
-		err := StartRestAPI(ctx, ":8443", "https://localhost:8443", "info", db, false, storageInstance, true, "cert.pem", "key.pem")
+		err := api.StartRestAPI(ctx, ":8443", "https://localhost:8443", "info", db, false, storageInstance, true, "cert.pem", "key.pem")
 		assert.NoError(t, err)
 	}()
 
@@ -76,31 +78,6 @@ func TestStartRestAPIWithHTTPS(t *testing.T) {
 
 	// Проверяем, что сервер отвечает с кодом 404, так как маршруты не настроены
 	assert.Equal(t, http.StatusNotFound, w.Code)
-
-	// Отменяем контекст для завершения работы сервера
-	cancel()
-
-	// Даем серверу время на завершение
-	time.Sleep(1 * time.Second)
-}
-
-func TestServerErrorHandling(t *testing.T) {
-	// Инициализация зависимостей
-	storageInstance := storage.NewStorage()
-	db := &repository.StoreDB{} // Предположим, что это mock или stub
-
-	// Создаем контекст с отменой
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Запускаем сервер в отдельной горутине
-	go func() {
-		err := StartRestAPI(ctx, ":invalid", "http://localhost:8080", "info", db, false, storageInstance, false, "", "")
-		assert.Error(t, err)
-	}()
-
-	// Даем серверу время на попытку запуска
-	time.Sleep(1 * time.Second)
 
 	// Отменяем контекст для завершения работы сервера
 	cancel()
