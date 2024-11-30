@@ -14,6 +14,7 @@ import (
 func TestInitializeAndStartApp(t *testing.T) {
 	// Создаем фиктивную конфигурацию и хранилище
 	mockConfig := &config.Config{
+		DBPath:     "",
 		FilePath:   "test_file_path",
 		ServerAddr: "localhost:8080",
 		BaseURL:    "http://localhost",
