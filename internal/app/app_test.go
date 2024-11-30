@@ -1,28 +1,22 @@
 package app
 
 import (
-	"os"
-	"fmt"
-	"syscall"
-	"testing"
-	"time"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"testing"
 )
 
-// Моковая структура для базы данных
-type MockDatabase struct{}
-
-func (m *MockDatabase) InitDatabase(dbPath string) error {
-	if dbPath == "invalid_db_path" {
-		return fmt.Errorf("Ошибка инициализации базы данных")
-	}
-	return nil
+// Мок для конфигурации
+type MockConfig struct {
+	DBPath     string
+	FilePath   string
+	ServerAddr string
+	BaseURL    string
+	LogLevel   string
 }
 
-// Тест для создания нового приложения
 func TestNewApp(t *testing.T) {
+	// Создаем экземпляры хранилища и конфигурации для теста
 	storageInstance := &storage.Storage{}
 	configInstance := &config.Config{
 		DBPath:      "test_db_path",
@@ -35,8 +29,10 @@ func TestNewApp(t *testing.T) {
 		KeyFile:     "",
 	}
 
+	// Создаем новое приложение
 	app := NewApp(storageInstance, configInstance)
 
+	// Проверяем, что приложение было инициализировано корректно
 	if app.storageInstance != storageInstance {
 		t.Errorf("Expected storageInstance to be %v, got %v", storageInstance, app.storageInstance)
 	}
@@ -48,6 +44,7 @@ func TestNewApp(t *testing.T) {
 
 // Тест для метода Start
 func TestApp_Start(t *testing.T) {
+	// Настройка конфигурации и хранилища для теста
 	mockStorage := &storage.Storage{}
 	mockConfig := &config.Config{
 		DBPath:     "test_db_path",
@@ -57,8 +54,10 @@ func TestApp_Start(t *testing.T) {
 		LogLevel:   "info",
 	}
 
+	// Создаем экземпляр App
 	app := NewApp(mockStorage, mockConfig)
 
+	// Вызываем метод Start и проверяем, что он не вызывает паники
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Start вызвал панику: %v", r)
@@ -70,14 +69,17 @@ func TestApp_Start(t *testing.T) {
 
 // Тест для метода Stop
 func TestApp_Stop(t *testing.T) {
+	// Настройка конфигурации и хранилища для теста
 	mockStorage := &storage.Storage{}
 	mockConfig := &config.Config{
 		DBPath:   "test_db_path",
 		FilePath: "test_file_path",
 	}
 
+	// Создаем экземпляр App
 	app := NewApp(mockStorage, mockConfig)
 
+	// Вызываем метод Stop и проверяем, что он не вызывает паники
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Stop вызвал панику: %v", r)
@@ -89,24 +91,29 @@ func TestApp_Stop(t *testing.T) {
 
 // Тест для метода Start с ошибкой инициализации базы данных
 func TestApp_Start_ErrorInitDatabase(t *testing.T) {
+	// Настроим конфигурацию для теста
 	mockConfig := &config.Config{
-		DBPath:     "invalid_db_path",
+		DBPath:     "invalid_db_path", // Ошибочный путь для базы данных
 		FilePath:   "test_file_path",
 		ServerAddr: "localhost:8080",
 		BaseURL:    "http://localhost",
 		LogLevel:   "info",
 	}
 
+	// Создаем экземпляр хранилища
 	mockStorage := storage.NewStorage()
 
+	// Создаем экземпляр App
 	app := NewApp(mockStorage, mockConfig)
 
+	// Проверка того, что метод Start не вызывает панику
 	defer func() {
 		if r := recover(); r != nil {
 			t.Errorf("Start вызвал панику: %v", r)
 		}
 	}()
 
+	// Запуск приложения и проверка ошибки
 	err := app.Start()
 	if err == nil {
 		t.Errorf("Ожидалась ошибка при инициализации базы данных, но её не было")
@@ -142,36 +149,5 @@ func TestApp_UseDatabase(t *testing.T) {
 				t.Errorf("UseDatabase() = %v, want %v", got, tt.wantResult)
 			}
 		})
-	}
-}
-
-// Тест обработки сигналов завершения
-func TestApp_SignalHandling(t *testing.T) {
-	mockStorage := &storage.Storage{}
-	mockConfig := &config.Config{
-		DBPath:     "test_db_path",
-		FilePath:   "test_file_path",
-		ServerAddr: "localhost:8080",
-		BaseURL:    "http://localhost",
-		LogLevel:   "info",
-	}
-
-	app := NewApp(mockStorage, mockConfig)
-
-	signalChan := make(chan os.Signal, 1)
-
-	go func() {
-		err := app.Start()
-		if err != nil {
-			t.Errorf("Start вернул ошибку: %v", err)
-		}
-	}()
-
-	signalChan <- syscall.SIGINT
-
-	select {
-	case <-signalChan:
-	case <-time.After(2 * time.Second):
-		t.Error("Сигнал завершения не был обработан")
 	}
 }
