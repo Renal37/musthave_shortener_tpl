@@ -3,40 +3,46 @@ package main
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/analysis/passes/shadow"
-	"honnef.co/go/tools/staticcheck"
-
-	"github.com/Renal37/musthave_shortener_tpl.git/cmd/staticlint/analyzers"
 )
 
-// Тест на корректность создания мультичекера и работы анализаторов
-func TestMultiCheckerFunctionality(t *testing.T) {
-	// Добавляем анализаторы из staticcheck класса SA
-	var staticcheckAnalyzers []*analysis.Analyzer
-	for _, v := range staticcheck.Analyzers {
-		if v.Analyzer.Name[:2] == "SA" {
-			staticcheckAnalyzers = append(staticcheckAnalyzers, v.Analyzer)
-		}
+func TestMultiChecker(t *testing.T) {
+	// Создаем фиктивный анализатор, который всегда успешно выполняется
+	successAnalyzer := &analysis.Analyzer{
+		Name: "successAnalyzer",
+		Doc:  "Успешный анализатор для тестирования",
+		Run: func(pass *analysis.Pass) (interface{}, error) {
+			return nil, nil
+		},
 	}
 
-	// Создаем список всех анализаторов, включая кастомный
-	myChecks := []*analysis.Analyzer{
-		inspect.Analyzer,
-		shadow.Analyzer,
-		analyzers.NoOsExitAnalyzer,
-	}
-	myChecks = append(myChecks, staticcheckAnalyzers...)
-
-	// Проверяем, что мультичекер успешно создается
-	mc := multiChecker(myChecks...)
-	if mc == nil {
-		t.Fatal("multiChecker should not be nil")
+	// Создаем фиктивный анализатор, который всегда возвращает ошибку
+	failingAnalyzer := &analysis.Analyzer{
+		Name: "failingAnalyzer",
+		Doc:  "Анализатор с ошибкой для тестирования",
+		Run: func(pass *analysis.Pass) (interface{}, error) {
+			return nil, assert.AnError
+		},
 	}
 
-	// Проверяем, что у мультичекера правильное имя
-	if mc.Name != "multiChecker" {
-		t.Errorf("expected multiChecker name to be 'multiChecker', got %s", mc.Name)
-	}
+	// Тестируем multiChecker с успешным анализатором
+	multi := multiChecker(successAnalyzer)
+	_, err := multi.Run(nil)
+	assert.NoError(t, err, "Ожидалось отсутствие ошибки от успешного анализатора")
+
+	// Тестируем multiChecker с анализатором, который возвращает ошибку
+	multi = multiChecker(failingAnalyzer)
+	_, err = multi.Run(nil)
+	assert.Error(t, err, "Ожидалась ошибка от анализатора с ошибкой")
+
+	// Тестируем multiChecker с несколькими анализаторами
+	multi = multiChecker(successAnalyzer, failingAnalyzer)
+	_, err = multi.Run(nil)
+	assert.Error(t, err, "Ожидалась ошибка, так как один из анализаторов возвращает ошибку")
+
+	// Тестируем multiChecker с двумя успешными анализаторами
+	multi = multiChecker(successAnalyzer, successAnalyzer)
+	_, err = multi.Run(nil)
+	assert.NoError(t, err, "Ожидалось отсутствие ошибки, так как все анализаторы успешны")
 }
