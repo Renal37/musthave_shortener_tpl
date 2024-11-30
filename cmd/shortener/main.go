@@ -17,6 +17,10 @@ var (
 )
 
 func main() {
+	initializeAndStartApp()
+}
+
+func initializeAndStartApp() {
 	// Если переменные не были переданы при компиляции, выводим "N/A"
 	if buildVersion == "" {
 		buildVersion = "N/A"
