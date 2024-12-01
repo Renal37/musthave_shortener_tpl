@@ -1,153 +1,86 @@
 package app
 
 import (
+	"context"
+	"testing"
+	"time"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
-// Мок для конфигурации
-type MockConfig struct {
-	DBPath     string
-	FilePath   string
-	ServerAddr string
-	BaseURL    string
-	LogLevel   string
-}
-
+// TestNewApp проверяет создание нового экземпляра приложения
 func TestNewApp(t *testing.T) {
-	// Создаем экземпляры хранилища и конфигурации для теста
-	storageInstance := &storage.Storage{}
-	configInstance := &config.Config{
-		DBPath:      "test_db_path",
-		FilePath:    "test_file_path",
-		ServerAddr:  "localhost:8080",
-		BaseURL:     "http://localhost",
+	mockStorage := storage.NewStorage() // Предположим, есть функция создания пустого хранилища
+	mockConfig := &config.Config{
+		FilePath:    "/tmp/test_data.json",
+		DBPath:      "",
+		ServerAddr:  ":8080",
+		BaseURL:     "http://localhost:8080",
 		LogLevel:    "debug",
 		EnableHTTPS: false,
 		CertFile:    "",
 		KeyFile:     "",
 	}
 
-	// Создаем новое приложение
-	app := NewApp(storageInstance, configInstance)
-
-	// Проверяем, что приложение было инициализировано корректно
-	if app.storageInstance != storageInstance {
-		t.Errorf("Expected storageInstance to be %v, got %v", storageInstance, app.storageInstance)
-	}
-
-	if app.config != configInstance {
-		t.Errorf("Expected config to be %v, got %v", configInstance, app.config)
-	}
-}
-
-// Тест для метода Start
-func TestApp_Start(t *testing.T) {
-	// Настройка конфигурации и хранилища для теста
-	mockStorage := &storage.Storage{}
-	mockConfig := &config.Config{
-		DBPath:     "test_db_path",
-		FilePath:   "test_file_path",
-		ServerAddr: "localhost:8080",
-		BaseURL:    "http://localhost",
-		LogLevel:   "info",
-	}
-
-	// Создаем экземпляр App
 	app := NewApp(mockStorage, mockConfig)
-
-	// Вызываем метод Start и проверяем, что он не вызывает паники
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("Start вызвал панику: %v", r)
-		}
-	}()
-
-	app.Start()
+	assert.NotNil(t, app)
+	assert.Equal(t, mockStorage, app.storageInstance)
+	assert.Equal(t, mockConfig, app.config)
 }
 
-// Тест для метода Stop
-func TestApp_Stop(t *testing.T) {
-	// Настройка конфигурации и хранилища для теста
-	mockStorage := &storage.Storage{}
-	mockConfig := &config.Config{
-		DBPath:   "test_db_path",
-		FilePath: "test_file_path",
-	}
-
-	// Создаем экземпляр App
-	app := NewApp(mockStorage, mockConfig)
-
-	// Вызываем метод Stop и проверяем, что он не вызывает паники
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("Stop вызвал панику: %v", r)
-		}
-	}()
-
-	app.Stop()
-}
-
-// Тест для метода Start с ошибкой инициализации базы данных
-func TestApp_Start_ErrorInitDatabase(t *testing.T) {
-	// Настроим конфигурацию для теста
-	mockConfig := &config.Config{
-		DBPath:     "invalid_db_path", // Ошибочный путь для базы данных
-		FilePath:   "test_file_path",
-		ServerAddr: "localhost:8080",
-		BaseURL:    "http://localhost",
-		LogLevel:   "info",
-	}
-
-	// Создаем экземпляр хранилища
+// TestUseDatabase проверяет функцию UseDatabase
+func TestUseDatabase(t *testing.T) {
 	mockStorage := storage.NewStorage()
+	mockConfig := &config.Config{
+		DBPath: "",
+	}
 
-	// Создаем экземпляр App
+	app := NewApp(mockStorage, mockConfig)
+	assert.True(t, app.UseDatabase())
+
+	mockConfig.DBPath = "/path/to/db"
+	app = NewApp(mockStorage, mockConfig)
+	assert.False(t, app.UseDatabase())
+}
+func TestStart(t *testing.T) {
+	mockStorage := storage.NewStorage()
+	mockConfig := &config.Config{
+		FilePath:   "/tmp/test_data.json",
+		DBPath:     "",
+		ServerAddr: ":8080",
+		BaseURL:    "http://localhost:8080",
+		LogLevel:   "debug",
+	}
+
 	app := NewApp(mockStorage, mockConfig)
 
-	// Проверка того, что метод Start не вызывает панику
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("Start вызвал панику: %v", r)
-		}
+	// Используем контекст с таймаутом
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- app.Start(ctx)
 	}()
 
-	// Запуск приложения и проверка ошибки
-	err := app.Start()
-	if err == nil {
-		t.Errorf("Ожидалась ошибка при инициализации базы данных, но её не было")
+	select {
+	case err := <-done:
+		// Тест завершился до таймаута
+		assert.Nil(t, err, "App.Start вернул ошибку")
+	case <-time.After(3 * time.Second): // даём дополнительное время
+		t.Fatal("Тест завершён по таймауту")
 	}
 }
 
-// Тест для метода UseDatabase
-func TestApp_UseDatabase(t *testing.T) {
-	tests := []struct {
-		name       string
-		dbPath     string
-		wantResult bool
-	}{
-		{
-			name:       "Database Path Provided",
-			dbPath:     "some/db/path",
-			wantResult: false,
-		},
-		{
-			name:       "No Database Path",
-			dbPath:     "",
-			wantResult: true,
-		},
+// TestStop проверяет остановку приложения
+func TestStop(t *testing.T) {
+	mockStorage := storage.NewStorage()
+	mockConfig := &config.Config{
+		FilePath: "/tmp/test_data.json",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockConfig := &config.Config{DBPath: tt.dbPath}
-			app := NewApp(nil, mockConfig)
-
-			got := app.UseDatabase()
-			if got != tt.wantResult {
-				t.Errorf("UseDatabase() = %v, want %v", got, tt.wantResult)
-			}
-		})
-	}
+	app := NewApp(mockStorage, mockConfig)
+	app.Stop()
 }

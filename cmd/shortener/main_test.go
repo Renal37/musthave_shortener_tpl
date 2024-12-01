@@ -1,14 +1,14 @@
 package main
 
 import (
+	"context"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"os"
 	"syscall"
 	"testing"
 	"time"
-
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 )
 
 func TestInitializeAndStartApp(t *testing.T) {
@@ -24,10 +24,11 @@ func TestInitializeAndStartApp(t *testing.T) {
 
 	// Создаем экземпляр приложения
 	appInstance := app.NewApp(mockStorage, mockConfig)
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	// Запускаем приложение в отдельной горутине
 	go func() {
-		if err := appInstance.Start(); err != nil {
+		if err := appInstance.Start(ctx); err != nil {
 			t.Errorf("Ошибка при запуске приложения: %v", err)
 		}
 	}()

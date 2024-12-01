@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
-	_ "net/http/pprof"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"log"
+	_ "net/http/pprof"
 )
 
 var (
@@ -43,7 +43,9 @@ func initializeAndStartApp() {
 	appInstance := app.NewApp(storageInstance, addrConfig)
 
 	// Запуск приложения
-	if err := appInstance.Start(); err != nil {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := appInstance.Start(ctx); err != nil {
 		log.Fatalf("Ошибка при запуске приложения: %v", err)
 	}
 }
