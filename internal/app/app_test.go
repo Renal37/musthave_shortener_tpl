@@ -5,12 +5,10 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"testing"
-
 	// "os"
 	// "syscall"
 	// "time"
 	// "context"
-
 )
 
 // TestNewApp проверяет создание нового экземпляра приложения
@@ -47,6 +45,7 @@ func TestUseDatabase(t *testing.T) {
 	app = NewApp(mockStorage, mockConfig)
 	assert.False(t, app.UseDatabase())
 }
+
 // func TestStart(t *testing.T) {
 // 	// Создаем фиктивную конфигурацию и хранилище
 // 	mockConfig := &config.Config{
