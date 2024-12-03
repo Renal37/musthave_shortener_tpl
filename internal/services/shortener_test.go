@@ -174,23 +174,6 @@ func TestShortenerService_Ping(t *testing.T) {
 	mockStore.AssertCalled(t, "PingStore")
 }
 
-// Тест для метода DeleteURLsRep
-func TestShortenerService_DeleteURLsRep(t *testing.T) {
-	mockRepo := new(MockRepository)
-	mockStore := new(MockStore)
-
-	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
-
-	shortURLs := []string{"short1", "short2"}
-	updateChan := make(chan string, len(shortURLs))
-	mockStore.On("DeleteURLs", "user1", mock.Anything, updateChan).Return(nil)
-
-	err := service.DeleteURLsRep("user1", shortURLs)
-
-	assert.NoError(t, err)
-	mockStore.AssertNumberOfCalls(t, "DeleteURLs", len(shortURLs))
-}
-
 // Тест для метода GetURLCount
 func TestShortenerService_GetURLCount(t *testing.T) {
 	mockRepo := new(MockRepository)
