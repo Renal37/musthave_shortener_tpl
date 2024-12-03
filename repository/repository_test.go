@@ -231,3 +231,41 @@ func TestCreateTable(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestGetURLCountSuccess(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("error creating mock db: %v", err)
+	}
+	defer db.Close()
+
+	store := &StoreDB{db: db}
+
+	rows := sqlmock.NewRows([]string{"count"}).AddRow(5)
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM urls").WillReturnRows(rows)
+
+	count, err := store.GetURLCount()
+
+	assert.NoError(t, err)
+	assert.Equal(t, 5, count)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetUserCountSuccess(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("error creating mock db: %v", err)
+	}
+	defer db.Close()
+
+	store := &StoreDB{db: db}
+
+	rows := sqlmock.NewRows([]string{"count"}).AddRow(5)
+	mock.ExpectQuery("SELECT COUNT.*FROM urls").WillReturnRows(rows)
+
+	count, err := store.GetURLCount()
+
+	assert.NoError(t, err)
+	assert.Equal(t, 5, count)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
