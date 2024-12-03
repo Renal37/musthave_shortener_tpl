@@ -211,3 +211,17 @@ func TestShortenerService_GetURLCount(t *testing.T) {
 	assert.Equal(t, 42, count)
 	mockStore.AssertCalled(t, "GetURLCount")
 }
+func TestShortenerService_GetUserCount(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockStore := new(MockStore)
+
+	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
+
+	mockStore.On("GetUserCount").Return(42, nil)
+
+	count, err := service.GetUserCount()
+
+	assert.NoError(t, err)
+	assert.Equal(t, 42, count)
+	mockStore.AssertCalled(t, "GetUserCount")
+}
