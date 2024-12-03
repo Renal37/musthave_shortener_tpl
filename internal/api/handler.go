@@ -278,6 +278,9 @@ func (s *RestAPI) DeleteUserUrls(ctx *gin.Context) {
 	ctx.Status(code)
 }
 
+// StatsHandler обрабатывает запросы на получение статистики о сервисе сокращения URL.
+// Проверяет, что запрос исходит из доверенной подсети, и возвращает общее количество
+// сокращённых URL и количество пользователей. Ответ предоставляется в формате JSON.
 func (s *RestAPI) StatsHandler(c *gin.Context) {
 	addrConfig := config.InitConfig()
 	trustedSubnet := addrConfig.TrustedSubnet
