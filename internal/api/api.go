@@ -2,12 +2,7 @@ package api
 
 import (
 	"context"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
-
+	"fmt"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -15,6 +10,11 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
 // RestAPI представляет собой структуру для REST API.
@@ -22,40 +22,26 @@ type RestAPI struct {
 	Shortener *services.ShortenerService // Сервис для сокращения URL.
 }
 
-// StartRestAPI запускает HTTP-сервер REST API для обработки запросов сокращения URL.
-//
-// Сервер создает и настраивает маршруты с использованием middleware и предоставляет эндпоинты
-// для работы с короткими ссылками, а также обеспечивает автоматическое логирование запросов и управление авторизацией.
+// StartRestAPI запускает REST API сервер.
+// Он настраивает необходимые маршруты и middleware, и начинает прослушивание входящих запросов.
+// Сервер завершает работу, когда переданный контекст отменяется.
 //
 // Параметры:
-//   - ServerAddr: Адрес для запуска сервера, например, ":8080".
-//   - BaseURL: Базовый URL сервиса сокращения ссылок.
-//   - LogLevel: Уровень логирования, например, "info" или "debug".
-//   - db: Объект StoreDB для хранения данных в базе (предполагается реализация интерфейса базы данных).
-//   - dbDNSTurn: Логический флаг, указывающий, использовать ли DNS-трансляцию для базы данных.
-//   - storage: Объект Storage для хранения данных (предполагается реализация интерфейса хранилища).
+// - ctx: Контекст, используемый для управления жизненным циклом сервера.
+// - ServerAddr: Адрес, на котором сервер будет прослушивать запросы.
+// - BaseURL: Базовый URL для сервиса сокращения ссылок.
+// - LogLevel: Уровень логирования для сервера.
+// - db: Подключение к базе данных, используемое сервисом сокращения ссылок.
+// - dbDNSTurn: Флаг, указывающий, включен ли DNS для базы данных.
+// - storage: Хранилище, используемое сервисом сокращения ссылок.
 //
-// Пример использования:
-//
-//	go func() {
-//	    err := StartRestAPI(":8080", "http://example.com", "info", db, false, storage)
-//	    if err != nil {
-//	        log.Fatalf("Ошибка запуска API: %v", err)
-//	    }
-//	}()
-//
-// Известные ограничения:
-//   - Если сервер запущен, его завершение произойдет при получении сигнала остановки от системы.
-//   - Время завершения при остановке ограничено 5 секундами (по умолчанию).
-//
-// BUG(Автор): Текущее логирование ограничено уровнем info; более детализированные уровни требуют дальнейшей настройки.
-// BUG(Автор): В конфигурации сервера может отсутствовать поддержка HTTPS.
-func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage) error {
+// Возвращает ошибку, если сервер не удалось запустить или корректно завершить.
+func StartRestAPI(ctx context.Context, ServerAddr, BaseURL, LogLevel string, db *repository.StoreDB, dbDNSTurn bool, storage *storage.Storage, EnableHTTPS bool, CertFile, KeyFile string) error {
 	if err := logger.Initialize(LogLevel); err != nil {
-		return err
+		return fmt.Errorf("ошибка инициализации логгера: %w", err)
 	}
 
-	logger.Log.Info("Running server", zap.String("address", ServerAddr))
+	logger.Log.Info("Запуск сервера", zap.String("address", ServerAddr))
 	storageShortener := services.NewShortenerService(BaseURL, storage, db, dbDNSTurn)
 
 	api := &RestAPI{
@@ -74,8 +60,40 @@ func StartRestAPI(ServerAddr, BaseURL string, LogLevel string, db *repository.St
 
 	api.SetRoutes(r)
 
-	// Мы ожидаем ошибку от startServer
-	return startServer(ServerAddr, r)
+	// Создаем HTTP или HTTPS сервер
+	srv := &http.Server{
+		Addr:    ServerAddr,
+		Handler: r,
+	}
+
+	go func() {
+		var err error
+		if EnableHTTPS {
+			logger.Log.Info("Запуск HTTPS сервера")
+			err = srv.ListenAndServeTLS(CertFile, KeyFile)
+		} else {
+			logger.Log.Info("Запуск HTTP сервера")
+			err = srv.ListenAndServe()
+		}
+
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Ошибка при запуске сервера: %v\n", err)
+		}
+	}()
+
+	// Ожидание завершения работы сервера
+	<-ctx.Done()
+
+	logger.Log.Info("Остановка сервера...")
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("ошибка при остановке сервера: %w", err)
+	}
+
+	logger.Log.Info("Сервер успешно остановлен")
+	return nil
 }
 
 func startServer(ServerAddr string, r *gin.Engine) error {
