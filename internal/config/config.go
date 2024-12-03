@@ -12,17 +12,17 @@ import (
 
 // Config представляет собой структуру для хранения конфигурационных параметров приложения.
 type Config struct {
-	ServerAddr  string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес и порт сервера
-	BaseURL     string `env:"BASE_URL" json:"base_url"`                   // Базовый URL
-	LogLevel    string `env:"FLAG_LOG_LEVEL" json:"-"`                    // Уровень логирования (только флаг или env)
-	FilePath    string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для хранения
-	DBPath      string `env:"DB_PATH" json:"database_dsn"`                // Путь к базе данных
-	EnablePprof string `env:"ENABLE_PPROF" json:"-"`                      // Включить pprof (только флаг или env)
-	EnableHTTPS bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // Включить HTTPS
-	CertFile    string `env:"CERT_FILE" json:"cert_file"`                 // Путь к файлу сертификата
-	KeyFile     string `env:"KEY_FILE" json:"key_file"`                   // Путь к файлу ключа
-	ConfigPath  string `env:"CONFIG" json:"-"`  
-	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`                          // Путь к файлу конфигурации (только флаг или env)
+	ServerAddr    string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес и порт сервера
+	BaseURL       string `env:"BASE_URL" json:"base_url"`                   // Базовый URL
+	LogLevel      string `env:"FLAG_LOG_LEVEL" json:"-"`                    // Уровень логирования (только флаг или env)
+	FilePath      string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для хранения
+	DBPath        string `env:"DB_PATH" json:"database_dsn"`                // Путь к базе данных
+	EnablePprof   string `env:"ENABLE_PPROF" json:"-"`                      // Включить pprof (только флаг или env)
+	EnableHTTPS   bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // Включить HTTPS
+	CertFile      string `env:"CERT_FILE" json:"cert_file"`                 // Путь к файлу сертификата
+	KeyFile       string `env:"KEY_FILE" json:"key_file"`                   // Путь к файлу ключа
+	ConfigPath    string `env:"CONFIG" json:"-"`
+	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"` // Путь к файлу конфигурации (только флаг или env)
 }
 
 var once sync.Once
