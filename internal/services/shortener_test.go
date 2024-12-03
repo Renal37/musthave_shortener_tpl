@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgerrcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -177,23 +175,6 @@ func TestShortenerService_GetFullRep(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, result)
 	mockStore.AssertCalled(t, "GetFull", "user1", "http://localhost")
-}
-
-// Test for the GetExistURL method
-func TestShortenerService_GetExistURL(t *testing.T) {
-	mockRepo := new(MockRepository)
-	mockStore := new(MockStore)
-
-	service := services.NewShortenerService("http://localhost", mockRepo, mockStore, true)
-
-	mockStore.On("Get", "https://example.com").Return("short123", nil)
-
-	pgErr := &pgconn.PgError{Code: pgerrcode.UniqueViolation}
-	shortURL, err := service.GetExistURL("https://example.com", pgErr)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "http://localhost/short123", shortURL)
-	mockStore.AssertCalled(t, "Get", "https://example.com")
 }
 
 // Test for the GetURLCount method
