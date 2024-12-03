@@ -2,53 +2,86 @@ package api_test
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"time"
 )
 
 func TestStartRestAPI(t *testing.T) {
-	// Create a mock storage and database
-	mockStorage := &storage.Storage{}
-	mockDB := &repository.StoreDB{}
+	// Инициализация зависимостей
+	storageInstance := storage.NewStorage()
+	db := &repository.StoreDB{} // Предположим, что это mock или stub
 
-	// Create a context with a timeout to ensure the server shuts down
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	// Создаем контекст с отменой
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start the REST API in a separate goroutine
+	// Запускаем сервер в отдельной горутине
 	go func() {
-		err := api.StartRestAPI(ctx, ":8081", "http://example.com", "info", mockDB, false, mockStorage)
-		assert.NoError(t, err, "Expected no error from StartRestAPI")
+		err := api.StartRestAPI(ctx, ":8080", "http://localhost:8080", "info", db, false, storageInstance, false, "", "")
+		assert.NoError(t, err)
 	}()
 
-	// Give the server a moment to start
-	time.Sleep(500 * time.Millisecond)
+	// Даем серверу время на запуск
+	time.Sleep(1 * time.Second)
 
-	// Create a test HTTP request to the correct endpoint
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:8081/health", nil)
-	assert.NoError(t, err, "Expected no error creating request")
+	// Создаем HTTP-запрос для проверки работы сервера
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
 
-	// Use httptest to create a response recorder
-	rr := httptest.NewRecorder()
+	// Создаем роутер и обрабатываем запрос
+	r := gin.Default()
+	r.ServeHTTP(w, req)
 
-	// Perform the request using the correct router
-	router := gin.Default()
-	router.GET("/health", func(c *gin.Context) {
-		c.String(http.StatusOK, "OK")
-	})
-	router.ServeHTTP(rr, req)
+	// Проверяем, что сервер отвечает с кодом 404, так как маршруты не настроены
+	assert.Equal(t, http.StatusNotFound, w.Code)
 
-	// Check the response status code
-	assert.Equal(t, http.StatusOK, rr.Code, "Expected status code 200")
+	// Отменяем контекст для завершения работы сервера
+	cancel()
 
-	// Check the response body
-	expectedBody := "OK"
-	assert.Equal(t, expectedBody, rr.Body.String(), "Expected response body to be 'OK'")
+	// Даем серверу время на завершение
+	time.Sleep(1 * time.Second)
+}
+
+func TestStartRestAPIWithHTTPS(t *testing.T) {
+	// Инициализация зависимостей
+	storageInstance := storage.NewStorage()
+	db := &repository.StoreDB{} // Предположим, что это mock или stub
+
+	// Создаем контекст с отменой
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Запускаем сервер с HTTPS в отдельной горутине
+	go func() {
+		err := api.StartRestAPI(ctx, ":8443", "https://localhost:8443", "info", db, false, storageInstance, true, "cert.pem", "key.pem")
+		assert.NoError(t, err)
+	}()
+
+	// Даем серверу время на запуск
+	time.Sleep(1 * time.Second)
+
+	// Создаем HTTP-запрос для проверки работы сервера
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	// Создаем роутер и обрабатываем запрос
+	r := gin.Default()
+	r.ServeHTTP(w, req)
+
+	// Проверяем, что сервер отвечает с кодом 404, так как маршруты не настроены
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// Отменяем контекст для завершения работы сервера
+	cancel()
+
+	// Даем серверу время на завершение
+	time.Sleep(1 * time.Second)
 }

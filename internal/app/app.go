@@ -29,7 +29,7 @@ func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 }
 
 // Start запускает приложение: загружает данные из файла в хранилище и запускает REST API.
-func (a *App) Start() error {
+func (a *App) Start(ctx context.Context) error {
 	// Инициализируем базу данных
 	db, err := repository.InitDatabase(a.config.DBPath)
 	if err != nil {
@@ -47,37 +47,40 @@ func (a *App) Start() error {
 		dbDNSTurn = false
 	}
 
-	// Контекст для завершения работы приложения
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Канал для получения системных сигналов
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
 	// Канал для завершения API
 	apiDone := make(chan error, 1)
 
 	// Запускаем REST API с контекстом
 	go func() {
-		err := api.StartRestAPI(ctx, a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
+		err := api.StartRestAPI(
+			ctx,
+			a.config.ServerAddr,
+			a.config.BaseURL,
+			a.config.LogLevel,
+			db,
+			dbDNSTurn,
+			a.storageInstance,
+			a.config.EnableHTTPS,
+			a.config.CertFile,
+			a.config.KeyFile,
+		)
 		apiDone <- err
 	}()
 
-	// Обработка сигналов завершения
-	go func() {
-		sig := <-signalChan
-		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
-		cancel()
-	}()
+	// Канал для системных сигналов
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	// Ожидание завершения API или получения ошибки
+	// Обработка завершения через контекст, системные сигналы или ошибки API
 	select {
 	case <-ctx.Done():
 		fmt.Println("Контекст завершён")
+	case sig := <-signalChan:
+		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
 	case err := <-apiDone:
 		if err != nil {
 			fmt.Printf("Ошибка при запуске REST API: %v\n", err)
+			return err
 		}
 	}
 
