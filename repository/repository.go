@@ -167,3 +167,25 @@ func (s *StoreDB) PingStore() error {
 	}
 	return nil
 }
+
+// GetURLCount возвращает количество записей в таблице URL.
+func (s *StoreDB) GetURLCount() (int, error) {
+	query := `SELECT COUNT(*) FROM urls`
+	var count int
+	err := s.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("error fetching URL count: %w", err)
+	}
+	return count, nil
+}
+
+// GetUserCount возвращает количество уникальных пользователей.
+func (s *StoreDB) GetUserCount() (int, error) {
+	query := `SELECT COUNT(DISTINCT userID) FROM urls`
+	var count int
+	err := s.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("error fetching user count: %w", err)
+	}
+	return count, nil
+}

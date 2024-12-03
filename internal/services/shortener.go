@@ -17,6 +17,8 @@ type Store interface {
 	Get(shortID string, originalURL string) (string, error)                    // Извлекает оригинальный URL по сокращенному
 	GetFull(userID string, BaseURL string) ([]map[string]string, error)        // Извлекает все URL пользователя
 	DeleteURLs(userID string, shortURL string, updateChan chan<- string) error // Удаляет URL
+	GetURLCount() (int, error)                                                 // Возвращает общее количество URL
+	GetUserCount() (int, error)                                                // Возвращает количество уникальных пользователей
 }
 
 // Repository определяет интерфейс для работы с кэшем.
@@ -127,4 +129,20 @@ func (s *ShortenerService) DeleteURLsRep(userID string, shortURLs []string) erro
 	}()
 
 	return nil
+}
+
+// GetURLCount возвращает общее количество сокращённых URL.
+func (s *ShortenerService) GetURLCount() (int, error) {
+	if s.dbDNSTurn {
+		return s.db.GetURLCount()
+	}
+	return 0, errors.New("метод не поддерживается для текущего хранилища")
+}
+
+// GetUserCount возвращает количество уникальных пользователей.
+func (s *ShortenerService) GetUserCount() (int, error) {
+	if s.dbDNSTurn {
+		return s.db.GetUserCount()
+	}
+	return 0, errors.New("метод не поддерживается для текущего хранилища")
 }

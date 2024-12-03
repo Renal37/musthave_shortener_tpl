@@ -1,14 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
-	"net/http"
-	_ "net/http/pprof"
-
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"log"
+	_ "net/http/pprof"
 )
 
 var (
@@ -18,6 +17,10 @@ var (
 )
 
 func main() {
+	initializeAndStartApp()
+}
+
+func initializeAndStartApp() {
 	// Если переменные не были переданы при компиляции, выводим "N/A"
 	if buildVersion == "" {
 		buildVersion = "N/A"
@@ -34,17 +37,15 @@ func main() {
 	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Printf("Build commit: %s\n", buildCommit)
 
+	// Инициализация конфигурации
 	addrConfig := config.InitConfig()
 	storageInstance := storage.NewStorage()
 	appInstance := app.NewApp(storageInstance, addrConfig)
-	// Запуск pprof сервера на порту 6060
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 
-	appInstance.Start()
-	appInstance.Stop()
+	// Запуск приложения
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := appInstance.Start(ctx); err != nil {
+		log.Fatalf("Ошибка при запуске приложения: %v", err)
+	}
 }
-
-// go build -ldflags "-X main.buildVersion=1.0.0 -X main.buildDate=$(date +%Y-%m-%d) -X main.buildCommit=$(git rev-parse HEAD)" -o shortener cmd/shortener/main.go
-// ./shortener

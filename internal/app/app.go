@@ -1,7 +1,11 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
@@ -22,37 +26,65 @@ func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
 		storageInstance: storageInstance,
 		config:          config,
 	}
-
 }
 
 // Start запускает приложение: загружает данные из файла в хранилище и запускает REST API.
-func (a *App) Start() error {
+func (a *App) Start(ctx context.Context) error {
 	// Инициализируем базу данных
 	db, err := repository.InitDatabase(a.config.DBPath)
 	if err != nil {
-		// Выводим ошибку, если не удалось инициализировать базу данных
 		fmt.Printf("Ошибка при инициализации базы данных: %v\n", err)
-		return nil
+		return err
 	}
 
 	dbDNSTurn := true
 	if a.UseDatabase() {
-		// Заполняем хранилище данными из файла
 		err = dump.FillFromStorage(a.storageInstance, a.config.FilePath)
 		if err != nil {
 			fmt.Printf("Ошибка при заполнении хранилища: %v\n", err)
-			return nil
+			return err
 		}
 		dbDNSTurn = false
 	}
 
-	// Запускаем REST API
-	err = api.StartRestAPI(a.config.ServerAddr, a.config.BaseURL, a.config.LogLevel, db, dbDNSTurn, a.storageInstance)
-	if err != nil {
-		// Выводим ошибку, если не удалось запустить API
-		fmt.Printf("Ошибка при запуске REST API: %v\n", err)
+	// Канал для завершения API
+	apiDone := make(chan error, 1)
 
+	// Запускаем REST API с контекстом
+	go func() {
+		err := api.StartRestAPI(
+			ctx,
+			a.config.ServerAddr,
+			a.config.BaseURL,
+			a.config.LogLevel,
+			db,
+			dbDNSTurn,
+			a.storageInstance,
+			a.config.EnableHTTPS,
+			a.config.CertFile,
+			a.config.KeyFile,
+		)
+		apiDone <- err
+	}()
+
+	// Канал для системных сигналов
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	// Обработка завершения через контекст, системные сигналы или ошибки API
+	select {
+	case <-ctx.Done():
+		fmt.Println("Контекст завершён")
+	case sig := <-signalChan:
+		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
+	case err := <-apiDone:
+		if err != nil {
+			fmt.Printf("Ошибка при запуске REST API: %v\n", err)
+			return err
+		}
 	}
+
+	a.Stop()
 	return nil
 }
 
@@ -63,12 +95,13 @@ func (a *App) UseDatabase() bool {
 
 // Stop останавливает приложение: сохраняет данные из хранилища в файл.
 func (a *App) Stop() {
-	// Сохраняем данные из хранилища в файл
+	fmt.Println("Сохраняем данные перед завершением работы...")
 	if a.UseDatabase() {
 		err := dump.Set(a.storageInstance, a.config.FilePath)
 		if err != nil {
-			// Выводим ошибку, если не удалось сохранить данные
 			fmt.Printf("Ошибка при сохранении данных: %v\n", err)
+		} else {
+			fmt.Println("Данные успешно сохранены.")
 		}
 	}
 }

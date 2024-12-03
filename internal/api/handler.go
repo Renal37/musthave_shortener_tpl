@@ -3,8 +3,10 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/gin-gonic/gin"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -274,4 +276,40 @@ func (s *RestAPI) DeleteUserUrls(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(code)
+}
+
+// StatsHandler обрабатывает запросы на получение статистики о сервисе сокращения URL.
+// Проверяет, что запрос исходит из доверенной подсети, и возвращает общее количество
+// сокращённых URL и количество пользователей. Ответ предоставляется в формате JSON.
+func (s *RestAPI) StatsHandler(c *gin.Context) {
+	addrConfig := config.InitConfig()
+	trustedSubnet := addrConfig.TrustedSubnet
+	clientIP := c.GetHeader("X-Real-IP")
+
+	if trustedSubnet != "" {
+		_, cidr, err := net.ParseCIDR(trustedSubnet)
+		if err != nil || !cidr.Contains(net.ParseIP(clientIP)) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			return
+		}
+	}
+
+	urlCount, err := s.Shortener.GetURLCount()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch URL count"})
+		return
+	}
+
+	userCount, err := s.Shortener.GetUserCount()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch user count"})
+		return
+	}
+
+	stats := map[string]int{
+		"urls":  urlCount,
+		"users": userCount,
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

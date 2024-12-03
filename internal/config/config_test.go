@@ -16,6 +16,10 @@ func TestInitConfig_Defaults(t *testing.T) {
 	assert.Equal(t, "info", config.LogLevel)
 	assert.Equal(t, "short-url-db.json", config.FilePath)
 	assert.Equal(t, "", config.DBPath)
+	assert.Equal(t, "false", config.EnablePprof)
+	assert.Equal(t, false, config.EnableHTTPS)
+	assert.Equal(t, "cert.pem", config.CertFile)
+	assert.Equal(t, "key.pem", config.KeyFile)
 }
 
 func TestInitConfig_WithEnvVars(t *testing.T) {
@@ -68,4 +72,38 @@ func TestInitConfig_WithEnvVars(t *testing.T) {
 	} else {
 		os.Unsetenv("DB_PATH")
 	}
+}
+
+func TestInitConfig_WithConfigFile(t *testing.T) {
+	// Создаем временный файл с JSON-конфигурацией
+	tempFile, err := os.CreateTemp("", "config-*.json")
+	assert.NoError(t, err)
+	defer os.Remove(tempFile.Name())
+
+	// Записываем тестовые данные в файл
+	configData := `{
+		"server_address": "192.168.1.1:8080",
+		"base_url": "http://192.168.1.1:8080",
+		"enable_https": true,
+		"cert_file": "custom-cert.pem",
+		"key_file": "custom-key.pem"
+	}`
+	_, err = tempFile.WriteString(configData)
+	assert.NoError(t, err)
+	tempFile.Close()
+
+	// Устанавливаем переменную окружения для пути к файлу конфигурации
+	os.Setenv("CONFIG", tempFile.Name())
+
+	// Создаем новый экземпляр Config и парсим файл конфигурации
+	config := InitConfig()
+
+	assert.Equal(t, "192.168.1.1:8080", config.ServerAddr)
+	assert.Equal(t, "http://192.168.1.1:8080", config.BaseURL)
+	assert.Equal(t, true, config.EnableHTTPS)
+	assert.Equal(t, "custom-cert.pem", config.CertFile)
+	assert.Equal(t, "custom-key.pem", config.KeyFile)
+
+	// Удаляем переменную окружения
+	os.Unsetenv("CONFIG")
 }

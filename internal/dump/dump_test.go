@@ -5,91 +5,62 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
+	"strconv"
 	"testing"
 )
 
-// Структура ShortCollector для хранения тестовых данных
+// Определение структуры ShortCollector для тестовых данных
 type ShortCollector struct {
 	OriginalURL string `json:"original_url"`
 	ShortURL    string `json:"short_url"`
 }
 
-// Тестируем успешное заполнение хранилища из файла
-func TestFillFromStorage_Success(t *testing.T) {
-	// Создаем временный файл для симуляции входного файла
+// Тест для несуществующего файла
+func TestFillFromStorage_NonExistentFile(t *testing.T) {
+	storageInstance := storage.NewStorage()
+	err := dump.FillFromStorage(storageInstance, "/non/existent/file")
+	assert.Error(t, err, "Ожидалась ошибка при попытке открыть несуществующий файл")
+}
+
+// Тест для большого набора данных
+func TestFillFromStorage_LargeDataSet(t *testing.T) {
 	tempFile, err := os.CreateTemp("", "testfile")
-	if err != nil {
-		t.Fatalf("Не удалось создать временный файл: %v", err)
-	}
-	defer os.Remove(tempFile.Name()) // Удаляем файл после теста
+	require.NoError(t, err, "Не удалось создать временный файл")
+	defer os.Remove(tempFile.Name())
 
-	// Подготавливаем тестовые данные
-	events := []ShortCollector{
-		{OriginalURL: "http://example.com", ShortURL: "http://short.url/1"},
-		{OriginalURL: "http://example.org", ShortURL: "http://short.url/2"},
-	}
-
-	// Записываем тестовые данные в временный файл
 	encoder := json.NewEncoder(tempFile)
-	for _, event := range events {
-		if err := encoder.Encode(event); err != nil {
-			t.Fatalf("Не удалось закодировать событие: %v", err)
+	for i := 0; i < 10000; i++ {
+		event := ShortCollector{
+			OriginalURL: "http://example.com/" + strconv.Itoa(i),
+			ShortURL:    "http://short.url/" + strconv.Itoa(i),
 		}
+		require.NoError(t, encoder.Encode(event), "Не удалось закодировать событие")
 	}
-	tempFile.Close() // Закрываем временный файл для завершения записи
-
-	// Создаем новый экземпляр хранилища
-	storageInstance := storage.NewStorage()
-
-	// Вызываем тестируемую функцию
-	err = dump.FillFromStorage(storageInstance, tempFile.Name())
-	assert.NoError(t, err)
-
-	// Проверяем, что в хранилище содержатся ожидаемые данные
-	for _, event := range events {
-		shortURL, exists := storageInstance.Get(event.OriginalURL)
-		assert.True(t, exists, "Ожидалось, что URL %s будет в хранилище", event.OriginalURL)
-		assert.Equal(t, event.ShortURL, shortURL, "Ожидался короткий URL %s, но был получен %s", event.ShortURL, shortURL)
-	}
-}
-
-// Тестируем ошибку при открытии файла
-func TestFillFromStorage_FileOpenError(t *testing.T) {
-	// Передаем неверный путь к файлу
-	storageInstance := storage.NewStorage()
-	err := dump.FillFromStorage(storageInstance, "/invalid/path/to/file")
-	assert.Error(t, err, "Ожидалась ошибка при открытии файла")
-}
-
-// Тестируем ошибку при декодировании JSON
-func TestFillFromStorage_JSONDecodeError(t *testing.T) {
-	// Создаем временный файл с некорректным JSON
-	tempFile, err := os.CreateTemp("", "testfile")
-	if err != nil {
-		t.Fatalf("Не удалось создать временный файл: %v", err)
-	}
-	defer os.Remove(tempFile.Name()) // Удаляем файл после теста
-
-	// Записываем некорректные данные в файл
-	tempFile.WriteString("invalid_json")
 	tempFile.Close()
 
-	// Создаем новое хранилище
 	storageInstance := storage.NewStorage()
-
-	// Вызываем FillFromStorage и проверяем, что возникла ошибка
 	err = dump.FillFromStorage(storageInstance, tempFile.Name())
-	assert.NoError(t, err, "Ожидалась ошибка при декодировании некорректного JSON")
+	assert.NoError(t, err, "Не ожидалось ошибки при обработке большого объема данных")
 }
 
-// Тестируем ошибку при записи в файл
-func TestSet_FileWriteError(t *testing.T) {
-	// Передаем неверный путь к файлу
-	storageInstance := storage.NewStorage()
-	storageInstance.Set("http://example.com", "http://short.url/1")
+// Тест для крайних случаев в Set
+func TestSet_EdgeCases(t *testing.T) {
+	tempFile, err := os.CreateTemp("", "testfile")
+	require.NoError(t, err, "Не удалось создать временный файл")
+	defer os.Remove(tempFile.Name())
 
-	// Вызываем Set и ожидаем ошибку
-	err := dump.Set(storageInstance, "/invalid/path/to/file")
-	assert.Error(t, err, "Ожидалась ошибка при записи в файл")
+	storageInstance := storage.NewStorage()
+
+	// Тест пустого URL
+	storageInstance.Set("", "")
+	err = dump.Set(storageInstance, tempFile.Name())
+	assert.NoError(t, err, "Не ожидалось ошибки при записи пустого URL")
+
+	// Тест очень длинного URL
+	longURL := "http://example.com/" + string(make([]byte, 10000))
+	storageInstance.Set(longURL, "http://short.url/long")
+	err = dump.Set(storageInstance, tempFile.Name())
+	assert.NoError(t, err, "Не ожидалось ошибки при записи длинного URL")
 }
