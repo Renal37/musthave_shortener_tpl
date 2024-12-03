@@ -2,11 +2,10 @@ package repository
 
 import (
 	"errors"
-	"testing"
-
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestStoreDB_Create(t *testing.T) {
@@ -267,5 +266,57 @@ func TestGetUserCountSuccess(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, 5, count)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestStoreDB_Get_WithOriginalURL(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := &StoreDB{db: db}
+	rows := sqlmock.NewRows([]string{"short_id", "deletedFlag"}).AddRow("shortURL", false)
+
+	mock.ExpectQuery("SELECT short_id, deletedFlag FROM urls WHERE original_url =").
+		WithArgs("originalURL").
+		WillReturnRows(rows)
+
+	shortURL, err := store.Get("", "originalURL")
+	assert.NoError(t, err)
+	assert.Equal(t, "shortURL", shortURL)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetURLCount_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := &StoreDB{db: db}
+
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM urls").
+		WillReturnError(errors.New("count error"))
+
+	count, err := store.GetURLCount()
+	assert.Error(t, err)
+	assert.Equal(t, 0, count)
+	assert.Equal(t, "error fetching URL count: count error", err.Error())
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetUserCount_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	store := &StoreDB{db: db}
+
+	mock.ExpectQuery("SELECT COUNT\\(DISTINCT userID\\) FROM urls").
+		WillReturnError(errors.New("count error"))
+
+	count, err := store.GetUserCount()
+	assert.Error(t, err)
+	assert.Equal(t, 0, count)
+	assert.Equal(t, "error fetching user count: count error", err.Error())
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
