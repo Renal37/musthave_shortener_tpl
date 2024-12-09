@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package shortener;
+
+option go_package = "/proto";
+
+service URLShortener {
+  rpc ShortenURL(ShortenURLRequest) returns (ShortenURLResponse);
+  rpc GetOriginalURL(GetOriginalURLRequest) returns (GetOriginalURLResponse);
+  rpc DeleteUserURLs(DeleteUserURLsRequest) returns (DeleteUserURLsResponse);
+  rpc GetUserURLs(GetUserURLsRequest) returns (GetUserURLsResponse);
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+}
+
+message ShortenURLRequest {
+  string url = 1;
+  string user_id = 2;
+}
+
+message ShortenURLResponse {
+  string short_url = 1;
+}
+
+message GetOriginalURLRequest {
+  string short_id = 1;
+}
+
+message GetOriginalURLResponse {
+  string original_url = 1;
+}
+
+message DeleteUserURLsRequest {
+  repeated string short_urls = 1;
+  string user_id = 2;
+}
+
+message DeleteUserURLsResponse {}
+
+message GetUserURLsRequest {
+  string user_id = 1;
+}
+
+message GetUserURLsResponse {
+  repeated URLResponse urls = 1;
+}
+
+message URLResponse {
+  string correlation_id = 1;
+  string short_url = 2;
+}
+
+message GetStatsRequest {}
+
+message GetStatsResponse {
+  int32 url_count = 1;
+  int32 user_count = 2;
+}
