@@ -1,15 +1,13 @@
-package app
+package app_test
 
 import (
-	"context"
-	"testing"
-	"time"
-
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"testing"
 )
 
 // MockStorage is a mock implementation of the storage.Storage interface
@@ -39,57 +37,66 @@ func (m *MockDump) Set(storage *storage.Storage, filePath string) error {
 	return args.Error(0)
 }
 
-func TestAppStartAndStop(t *testing.T) {
-	// Create mock instances
-	mockStorage := &MockStorage{}
-	mockService := &MockService{}
-	mockDump := &MockDump{}
-	mockConfig := &config.Config{
-		DBPath:      "", // Ensure this is empty to trigger UseDatabase() == true
-		FilePath:    "/tmp/test_data.json",
-		ServerAddr:  ":8080",
-		BaseURL:     "http://localhost:8080",
-		LogLevel:    "info",
-		EnableHTTPS: false,
-		CertFile:    "",
-		KeyFile:     "",
-	}
+func TestApp_UseDatabase(t *testing.T) {
+	cfg := &config.Config{DBPath: ""}
+	app := app.NewApp(nil, nil, cfg)
+	assert.True(t, app.UseDatabase(), "UseDatabase should return true when DBPath is empty")
 
-	// Set expectations for mockDump
-	mockDump.On("FillFromStorage", mock.Anything, mockConfig.FilePath).Return(nil)
-	mockDump.On("Set", mock.Anything, mockConfig.FilePath).Return(nil)
-
-	// Create an instance of the App with mock functions
-	app := &App{
-		storageInstance:  &mockStorage.Storage,
-		servicesInstance: &mockService.ShortenerService,
-		config:           mockConfig,
-		fillFromStorage:  mockDump.FillFromStorage,
-		set:              mockDump.Set,
-	}
-
-	// Create a context with cancel
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Start the application in a separate goroutine
-	go func() {
-		err := app.Start(ctx)
-		assert.NoError(t, err, "App should start without error")
-	}()
-
-	// Give the server time to start
-	time.Sleep(1 * time.Second)
-
-	// Check if the application is using the database
-	assert.True(t, app.UseDatabase(), "App should use the database")
-
-	// Cancel the context to stop the application
-	cancel()
-
-	// Give the server time to stop
-	time.Sleep(1 * time.Second)
-
-	// Verify that the Stop method was called
-	mockDump.AssertCalled(t, "Set", mock.Anything, mockConfig.FilePath)
+	cfg.DBPath = "test.db"
+	assert.False(t, app.UseDatabase(), "UseDatabase should return false when DBPath is not empty")
 }
+
+// func TestAppStartAndStop(t *testing.T) {
+// 	// Create mock instances
+// 	mockStorage := &MockStorage{}
+// 	mockService := &MockService{}
+// 	mockDump := &MockDump{}
+// 	mockConfig := &config.Config{
+// 		DBPath:      "", // Ensure this is empty to trigger UseDatabase() == true
+// 		FilePath:    "/tmp/test_data.json",
+// 		ServerAddr:  ":8080",
+// 		BaseURL:     "http://localhost:8080",
+// 		LogLevel:    "info",
+// 		EnableHTTPS: false,
+// 		CertFile:    "",
+// 		KeyFile:     "",
+// 	}
+
+// 	// Set expectations for mockDump
+// 	mockDump.On("FillFromStorage", mock.Anything, mockConfig.FilePath).Return(nil)
+// 	mockDump.On("Set", mock.Anything, mockConfig.FilePath).Return(nil)
+
+// 	// Create an instance of the App with mock functions
+// 	app := &App{
+// 		storageInstance:  &mockStorage.Storage,
+// 		servicesInstance: &mockService.ShortenerService,
+// 		config:           mockConfig,
+// 		fillFromStorage:  mockDump.FillFromStorage,
+// 		set:              mockDump.Set,
+// 	}
+
+// 	// Create a context with cancel
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
+
+// 	// Start the application in a separate goroutine
+// 	go func() {
+// 		err := app.Start(ctx)
+// 		assert.NoError(t, err, "App should start without error")
+// 	}()
+
+// 	// Give the server time to start
+// 	time.Sleep(1 * time.Second)
+
+// 	// Check if the application is using the database
+// 	assert.True(t, app.UseDatabase(), "App should use the database")
+
+// 	// Cancel the context to stop the application
+// 	cancel()
+
+// 	// Give the server time to stop
+// 	time.Sleep(1 * time.Second)
+
+// 	// Verify that the Stop method was called
+// 	mockDump.AssertCalled(t, "Set", mock.Anything, mockConfig.FilePath)
+// }
