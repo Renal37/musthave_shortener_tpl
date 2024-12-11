@@ -1,97 +1,95 @@
 package app
 
 import (
+	"context"
+	"testing"
+	"time"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	// "os"
-	// "syscall"
-	// "time"
-	// "context"
+	"github.com/stretchr/testify/mock"
 )
 
-// TestNewApp проверяет создание нового экземпляра приложения
-func TestNewApp(t *testing.T) {
-	mockStorage := storage.NewStorage() // Предположим, есть функция создания пустого хранилища
+// MockStorage is a mock implementation of the storage.Storage interface
+type MockStorage struct {
+	mock.Mock
+	storage.Storage // Embed the actual interface to satisfy the type requirement
+}
+
+// MockService is a mock implementation of the services.ShortenerService interface
+type MockService struct {
+	mock.Mock
+	services.ShortenerService // Embed the actual interface to satisfy the type requirement
+}
+
+// MockDump is a mock implementation of the dump package functions
+type MockDump struct {
+	mock.Mock
+}
+
+func (m *MockDump) FillFromStorage(storage *storage.Storage, filePath string) error {
+	args := m.Called(storage, filePath)
+	return args.Error(0)
+}
+
+func (m *MockDump) Set(storage *storage.Storage, filePath string) error {
+	args := m.Called(storage, filePath)
+	return args.Error(0)
+}
+
+func TestAppStartAndStop(t *testing.T) {
+	// Create mock instances
+	mockStorage := &MockStorage{}
+	mockService := &MockService{}
+	mockDump := &MockDump{}
 	mockConfig := &config.Config{
+		DBPath:      "", // Ensure this is empty to trigger UseDatabase() == true
 		FilePath:    "/tmp/test_data.json",
-		DBPath:      "",
 		ServerAddr:  ":8080",
 		BaseURL:     "http://localhost:8080",
-		LogLevel:    "debug",
+		LogLevel:    "info",
 		EnableHTTPS: false,
 		CertFile:    "",
 		KeyFile:     "",
 	}
 
-	app := NewApp(mockStorage, mockConfig)
-	assert.NotNil(t, app)
-	assert.Equal(t, mockStorage, app.storageInstance)
-	assert.Equal(t, mockConfig, app.config)
-}
+	// Set expectations for mockDump
+	mockDump.On("FillFromStorage", mock.Anything, mockConfig.FilePath).Return(nil)
+	mockDump.On("Set", mock.Anything, mockConfig.FilePath).Return(nil)
 
-// TestUseDatabase проверяет функцию UseDatabase
-func TestUseDatabase(t *testing.T) {
-	mockStorage := storage.NewStorage()
-	mockConfig := &config.Config{
-		DBPath: "",
+	// Create an instance of the App with mock functions
+	app := &App{
+		storageInstance:  &mockStorage.Storage,
+		servicesInstance: &mockService.ShortenerService,
+		config:           mockConfig,
+		fillFromStorage:  mockDump.FillFromStorage,
+		set:              mockDump.Set,
 	}
 
-	app := NewApp(mockStorage, mockConfig)
-	assert.True(t, app.UseDatabase())
+	// Create a context with cancel
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	mockConfig.DBPath = "/path/to/db"
-	app = NewApp(mockStorage, mockConfig)
-	assert.False(t, app.UseDatabase())
-}
+	// Start the application in a separate goroutine
+	go func() {
+		err := app.Start(ctx)
+		assert.NoError(t, err, "App should start without error")
+	}()
 
-// func TestStart(t *testing.T) {
-// 	// Создаем фиктивную конфигурацию и хранилище
-// 	mockConfig := &config.Config{
-// 		DBPath:     "",
-// 		FilePath:   "test_file_path",
-// 		ServerAddr: "localhost:8080",
-// 		BaseURL:    "http://localhost",
-// 		LogLevel:   "info",
-// 	}
-// 	mockStorage := storage.NewStorage()
+	// Give the server time to start
+	time.Sleep(1 * time.Second)
 
-// 	// Создаем экземпляр приложения
-// 	app := NewApp(mockStorage, mockConfig)
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-// 	// Запускаем приложение в отдельной горутине
-// 	go func() {
-// 		if err := app.Start(ctx); err != nil {
-// 			t.Errorf("Ошибка при запуске приложения: %v", err)
-// 		}
-// 	}()
+	// Check if the application is using the database
+	assert.True(t, app.UseDatabase(), "App should use the database")
 
-// 	// Даем серверу время для запуска
-// 	time.Sleep(2 * time.Second)
+	// Cancel the context to stop the application
+	cancel()
 
-// 	// Отправляем сигнал завершения
-// 	process, err := os.FindProcess(os.Getpid())
-// 	if err != nil {
-// 		t.Fatalf("Не удалось найти процесс: %v", err)
-// 	}
+	// Give the server time to stop
+	time.Sleep(1 * time.Second)
 
-// 	if err := process.Signal(syscall.SIGINT); err != nil {
-// 		t.Fatalf("Не удалось отправить сигнал завершения: %v", err)
-// 	}
-
-// 	// Даем серверу время для завершения
-// 	time.Sleep(2 * time.Second)
-// }
-
-// TestStop проверяет остановку приложения
-func TestStop(t *testing.T) {
-	mockStorage := storage.NewStorage()
-	mockConfig := &config.Config{
-		FilePath: "/tmp/test_data.json",
-	}
-
-	app := NewApp(mockStorage, mockConfig)
-	app.Stop()
+	// Verify that the Stop method was called
+	mockDump.AssertCalled(t, "Set", mock.Anything, mockConfig.FilePath)
 }

@@ -14,19 +14,23 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// App представляет собой структуру приложения, содержащую хранилище и конфигурацию.
+// App represents the application structure containing storage and configuration.
 type App struct {
-	storageInstance  *storage.Storage           // Указатель на хранилище
-	servicesInstance *services.ShortenerService // Указатель на сервисы
-	config           *config.Config             // Указатель на конфигурацию
+	storageInstance  *storage.Storage           // Pointer to storage
+	servicesInstance *services.ShortenerService // Pointer to services
+	config           *config.Config             // Pointer to configuration
+	fillFromStorage  func(*storage.Storage, string) error
+	set              func(*storage.Storage, string) error
 }
 
-// NewApp создает новый экземпляр приложения с заданным хранилищем и конфигурацией.
+// NewApp creates a new instance of the application with the given storage and configuration.
 func NewApp(storageInstance *storage.Storage, servicesInstance *services.ShortenerService, config *config.Config) *App {
 	return &App{
 		storageInstance:  storageInstance,
 		servicesInstance: servicesInstance,
 		config:           config,
+		fillFromStorage:  dump.FillFromStorage,
+		set:              dump.Set,
 	}
 }
 
@@ -98,7 +102,7 @@ func (a *App) UseDatabase() bool {
 func (a *App) Stop() error {
 	fmt.Println("Сохраняем данные перед завершением работы...")
 	if a.UseDatabase() {
-		err := dump.Set(a.storageInstance, a.config.FilePath)
+		err := a.set(a.storageInstance, a.config.FilePath) // Используем a.set вместо dump.Set
 		if err != nil {
 			return err
 		}
