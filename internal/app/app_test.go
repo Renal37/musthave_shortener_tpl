@@ -10,19 +10,21 @@ import (
 	"testing"
 )
 
-// MockStorage is a mock implementation of the storage.Storage interface
+// MockStorage реализует интерфейс storage.Storage
+// для мокирования в тестах.
 type MockStorage struct {
 	mock.Mock
-	storage.Storage // Embed the actual interface to satisfy the type requirement
+	storage.Storage // Встраивание интерфейса для удовлетворения типа
 }
 
-// MockService is a mock implementation of the services.ShortenerService interface
+// MockService реализует интерфейс services.ShortenerService
+// для мокирования в тестах.
 type MockService struct {
 	mock.Mock
-	services.ShortenerService // Embed the actual interface to satisfy the type requirement
+	services.ShortenerService // Встраивание интерфейса для удовлетворения типа
 }
 
-// MockDump is a mock implementation of the dump package functions
+// MockDump реализует мокирование функций из пакета dump
 type MockDump struct {
 	mock.Mock
 }
@@ -38,66 +40,30 @@ func (m *MockDump) Set(storage *storage.Storage, filePath string) error {
 }
 
 func TestApp_UseDatabase(t *testing.T) {
+	// Инициализация конфигурации без пути к базе данных
 	cfg := &config.Config{DBPath: ""}
-	app := app.NewApp(nil, nil, cfg)
-	assert.True(t, app.UseDatabase(), "UseDatabase should return true when DBPath is empty")
 
+	// Создаем приложение с пустыми зависимостями
+	appInstance := app.NewApp(nil, nil, cfg)
+	assert.True(t, appInstance.UseDatabase(), "UseDatabase должен возвращать true, если DBPath пустой")
+
+	// Обновляем конфигурацию с указанием пути к базе данных
 	cfg.DBPath = "test.db"
-	assert.False(t, app.UseDatabase(), "UseDatabase should return false when DBPath is not empty")
+	appInstance = app.NewApp(nil, nil, cfg)
+	assert.False(t, appInstance.UseDatabase(), "UseDatabase должен возвращать false, если DBPath не пустой")
 }
 
-// func TestAppStartAndStop(t *testing.T) {
-// 	// Create mock instances
+// func TestStop(t *testing.T) {
+// 	// Создаем мок-хранилище и конфигурацию
 // 	mockStorage := &MockStorage{}
 // 	mockService := &MockService{}
-// 	mockDump := &MockDump{}
 // 	mockConfig := &config.Config{
-// 		DBPath:      "", // Ensure this is empty to trigger UseDatabase() == true
-// 		FilePath:    "/tmp/test_data.json",
-// 		ServerAddr:  ":8080",
-// 		BaseURL:     "http://localhost:8080",
-// 		LogLevel:    "info",
-// 		EnableHTTPS: false,
-// 		CertFile:    "",
-// 		KeyFile:     "",
+// 		FilePath: "/tmp/test_data.json",
 // 	}
 
-// 	// Set expectations for mockDump
-// 	mockDump.On("FillFromStorage", mock.Anything, mockConfig.FilePath).Return(nil)
-// 	mockDump.On("Set", mock.Anything, mockConfig.FilePath).Return(nil)
+// 	// Создаем приложение с мок-объектами
+// 	appInstance := app.NewApp(mockStorage, mockService, mockConfig)
 
-// 	// Create an instance of the App with mock functions
-// 	app := &App{
-// 		storageInstance:  &mockStorage.Storage,
-// 		servicesInstance: &mockService.ShortenerService,
-// 		config:           mockConfig,
-// 		fillFromStorage:  mockDump.FillFromStorage,
-// 		set:              mockDump.Set,
-// 	}
-
-// 	// Create a context with cancel
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-
-// 	// Start the application in a separate goroutine
-// 	go func() {
-// 		err := app.Start(ctx)
-// 		assert.NoError(t, err, "App should start without error")
-// 	}()
-
-// 	// Give the server time to start
-// 	time.Sleep(1 * time.Second)
-
-// 	// Check if the application is using the database
-// 	assert.True(t, app.UseDatabase(), "App should use the database")
-
-// 	// Cancel the context to stop the application
-// 	cancel()
-
-// 	// Give the server time to stop
-// 	time.Sleep(1 * time.Second)
-
-// 	// Verify that the Stop method was called
-// 	mockDump.AssertCalled(t, "Set", mock.Anything, mockConfig.FilePath)
+// 	// Проверяем вызов метода Stop
+// 	appInstance.Stop()
 // }
-
