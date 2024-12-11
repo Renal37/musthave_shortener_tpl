@@ -1,4 +1,4 @@
-package app
+package grpc
 
 import (
 	"context"
@@ -79,7 +79,7 @@ func (s *GRPCServer) GetStats(ctx context.Context, req *pb.GetStatsRequest) (*pb
 	}, nil
 }
 
-func StartGRPCServer(service *services.ShortenerService, address string) error {
+func StartGRPCServer(ctx context.Context, service *services.ShortenerService, address string) error {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
@@ -90,5 +90,10 @@ func StartGRPCServer(service *services.ShortenerService, address string) error {
 	pb.RegisterURLShortenerServer(grpcServer, NewGRPCServer(service))
 
 	log.Printf("gRPC сервер слушает на %v", lis.Addr())
-	return grpcServer.Serve(lis)
+	go grpcServer.Serve(lis)
+
+	<-ctx.Done()
+	// Остановка gRPC сервера
+	grpcServer.Stop()
+	return nil
 }

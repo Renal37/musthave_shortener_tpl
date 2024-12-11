@@ -51,33 +51,22 @@ func initializeAndStartApp() {
 	dbDNSTurn := false // Установите в true, если хотите использовать базу данных для хранения
 
 	servicesInstance := services.NewShortenerService("http://localhost:8080", storageInstance, dbInstance, dbDNSTurn)
-
-	appInstance := app.NewApp(storageInstance, addrConfig)
+	appInstance := app.NewApp(storageInstance, servicesInstance, addrConfig)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Запуск REST API
 	go func() {
-		if err := appInstance.Start(ctx); err != nil {
-			log.Fatalf("Ошибка при запуске приложения: %v", err)
-		}
+		// Канал для системных сигналов
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+		// Ожидание сигнала завершения
+		<-signalChan
+		cancel()
 	}()
 
-	// Запуск gRPC сервера
-	if err := app.StartGRPCServer(servicesInstance, ":50051"); err != nil {
-		log.Fatalf("Ошибка при запуске gRPC-сервера: %v", err)
-	}
-
-	// Обработка корректного завершения
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-
-	select {
-	case <-ctx.Done():
-		fmt.Println("Контекст завершён")
-	case sig := <-signalChan:
-		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
-		cancel()
+	if err := appInstance.Start(ctx); err != nil {
+		log.Fatalf("Ошибка при запуске приложения: %v", err)
 	}
 }
