@@ -1,4 +1,4 @@
-package api_test
+package rest
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -17,7 +16,7 @@ func ShortenURLHandlers() {
 	// Инициализация зависимостей
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
-	handler := api.RestAPI{Shortener: storageShortener}
+	handler := RestAPI{Shortener: storageShortener}
 
 	// Настройка роутера Gin
 	r := gin.Default()
@@ -45,7 +44,7 @@ func RedirectToOriginalURLHandlers() {
 	// Инициализация зависимостей
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
-	handler := api.RestAPI{Shortener: storageShortener}
+	handler := RestAPI{Shortener: storageShortener}
 	// Добавляем URL в хранилище
 	storageInstance.Set("test_id", "https://practicum.yandex.ru/")
 
