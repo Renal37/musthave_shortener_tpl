@@ -100,3 +100,4 @@ func TestApp_UseDatabase(t *testing.T) {
 // 	// Verify that the Stop method was called
 // 	mockDump.AssertCalled(t, "Set", mock.Anything, mockConfig.FilePath)
 // }
+

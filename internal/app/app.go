@@ -14,16 +14,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// App represents the application structure containing storage and configuration.
 type App struct {
-	storageInstance  *storage.Storage           // Pointer to storage
-	servicesInstance *services.ShortenerService // Pointer to services
-	config           *config.Config             // Pointer to configuration
+	storageInstance  *storage.Storage           
+	servicesInstance *services.ShortenerService 
+	config           *config.Config             
 	fillFromStorage  func(*storage.Storage, string) error
 	set              func(*storage.Storage, string) error
 }
 
-// NewApp creates a new instance of the application with the given storage and configuration.
 func NewApp(storageInstance *storage.Storage, servicesInstance *services.ShortenerService, config *config.Config) *App {
 	return &App{
 		storageInstance:  storageInstance,
