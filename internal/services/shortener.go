@@ -87,7 +87,7 @@ func (s *ShortenerService) Get(shortID string) (string, error) {
 	return originalURL, nil
 }
 
-// Ping проверяет доступность соединения с базой данных.
+// Ping проверяет дост	упность соединения с базой данных.
 func (s *ShortenerService) Ping() error {
 	return s.db.PingStore()
 }
