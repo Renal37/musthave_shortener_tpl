@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-
 // MockDump реализует мокирование функций из пакета dump
 type MockDump struct {
 	mock.Mock
@@ -47,4 +46,23 @@ func TestStop(t *testing.T) {
 
 	app := app.NewApp(mockStorage, nil, mockConfig)
 	app.Stop()
+}
+func TestApp_UseDatabaseWithDifferentDBPaths(t *testing.T) {
+	tests := []struct {
+		dbPath string
+		expect bool
+	}{
+		{"", true},                      // Пустой путь
+		{"test.db", false},              // Непустой путь
+		{"./relative_path.db", false},   // Относительный путь
+		{"/absolute/path/to/db", false}, // Абсолютный путь
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.dbPath, func(t *testing.T) {
+			cfg := &config.Config{DBPath: tt.dbPath}
+			appInstance := app.NewApp(nil, nil, cfg)
+			assert.Equal(t, tt.expect, appInstance.UseDatabase())
+		})
+	}
 }
