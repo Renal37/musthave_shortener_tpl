@@ -205,3 +205,28 @@ func TestShortenerService_GetUserCount(t *testing.T) {
 	assert.Equal(t, 42, count)
 	mockStore.AssertCalled(t, "GetUserCount")
 }
+
+func TestShortenerService_GetExistURL_UniqueViolation(t *testing.T) {
+	mockStore := new(MockStore)
+	service := services.NewShortenerService("http://short.url", new(MockRepository), mockStore, true)
+	pgErr := &pgconn.PgError{Code: pgerrcode.UniqueViolation}
+	mockStore.On("Get", "", "http://original.url").Return("shortID", nil)
+
+	shortURL, err := service.GetExistURL("http://original.url", pgErr)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://short.url/shortID", shortURL)
+}
+
+func TestShortenerService_GetURLCount_NoDB(t *testing.T) {
+	service := services.NewShortenerService("http://short.url", new(MockRepository), new(MockStore), false)
+	count, err := service.GetURLCount()
+	assert.Error(t, err)
+	assert.Equal(t, 0, count)
+}
+
+func TestShortenerService_GetUserCount_NoDB(t *testing.T) {
+	service := services.NewShortenerService("http://short.url", new(MockRepository), new(MockStore), false)
+	count, err := service.GetUserCount()
+	assert.Error(t, err)
+	assert.Equal(t, 0, count)
+}
