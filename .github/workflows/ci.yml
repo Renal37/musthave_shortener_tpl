@@ -26,7 +26,7 @@ jobs:
         run: go get github.com/mattn/goveralls
 
       - name: Run tests with coverage
-        run: go test -coverprofile=coverage.out $(go list ./... | grep -v './shortener/...' | grep -v './proto/...' | grep -v 'path/to/excluded/third_directory')
+        run: go test -coverprofile=coverage.out $(go list ./... | grep -v './cmd/shortener/...' | grep -v './proto/' | grep -v 'path/to/excluded/third_directory')
         
 
       - name: Calculate total coverage
