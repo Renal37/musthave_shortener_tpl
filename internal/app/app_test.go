@@ -53,17 +53,3 @@ func TestApp_UseDatabase(t *testing.T) {
 	assert.False(t, appInstance.UseDatabase(), "UseDatabase должен возвращать false, если DBPath не пустой")
 }
 
-// func TestStop(t *testing.T) {
-// 	// Создаем мок-хранилище и конфигурацию
-// 	mockStorage := &MockStorage{}
-// 	mockService := &MockService{}
-// 	mockConfig := &config.Config{
-// 		FilePath: "/tmp/test_data.json",
-// 	}
-
-// 	// Создаем приложение с мок-объектами
-// 	appInstance := app.NewApp(mockStorage, mockService, mockConfig)
-
-// 	// Проверяем вызов метода Stop
-// 	appInstance.Stop()
-// }
