@@ -78,7 +78,7 @@ func TestApp_Start(t *testing.T) {
     mockConfig := &config.Config{
         DBPath:     "",
         FilePath:   "/tmp/test_data.json", // Убедитесь, что этот путь не используется на самом деле в тестах
-        ServerAddr: "localhost:8080",
+        ServerAddr: "localhost:0",
         BaseURL:    "/api",
         LogLevel:   "info",
         EnableHTTPS: false,
