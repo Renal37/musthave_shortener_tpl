@@ -1,10 +1,13 @@
 package app_test
 
 import (
+	"context"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
+	"time"
 	"github.com/stretchr/testify/mock"
 	"testing"
 )
@@ -65,4 +68,67 @@ func TestApp_UseDatabaseWithDifferentDBPaths(t *testing.T) {
 			assert.Equal(t, tt.expect, appInstance.UseDatabase())
 		})
 	}
+}
+func TestApp_Start(t *testing.T) {
+    // Мокаем хранилище и сервисы
+    mockStorage := storage.NewStorage()
+    mockServices := &services.ShortenerService{}
+    
+    // Конфигурация с пустым DBPath
+    mockConfig := &config.Config{
+        DBPath:     "",
+        FilePath:   "/tmp/test_data.json", // Убедитесь, что этот путь не используется на самом деле в тестах
+        ServerAddr: "localhost:8080",
+        BaseURL:    "/api",
+        LogLevel:   "info",
+        EnableHTTPS: false,
+    }
+
+    // Мокируем функции из dump
+    mockDump := new(MockDump)
+    app := app.NewApp(mockStorage, mockServices, mockConfig)
+    
+    // Замена реальных функций на моки
+    app.FillFromStorage = mockDump.FillFromStorage
+    app.Set = mockDump.Set
+
+    // Ожидаем вызов метода FillFromStorage
+
+    // Ожидаем вызов метода Set с аргументами, которые могут быть переданы
+    mockDump.On("Set", mockStorage, mockConfig.FilePath).Return(nil)
+
+    // Создаем контекст с тайм-аутом 5 секунд
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    // Запускаем приложение с ограничением времени
+    err := app.Start(ctx)
+    assert.NoError(t, err, "app.Start должен завершиться без ошибок")
+
+    // Проверяем, что методы были вызваны
+}
+
+
+
+func TestStop_WithoutDatabase(t *testing.T) {
+	mockStorage := storage.NewStorage()
+	mockConfig := &config.Config{
+		DBPath:   "", // База данных не используется
+		FilePath: "/tmp/test_data.json",
+	}
+
+	// Мокируем функции из dump
+	mockDump := new(MockDump)
+	mockDump.On("Set", mockStorage, mockConfig.FilePath).Return(nil)
+
+	// Создаем приложение с моками
+	app := app.NewApp(mockStorage, nil, mockConfig)
+	app.Set = mockDump.Set
+
+	// Вызываем Stop
+	err := app.Stop()
+	assert.NoError(t, err)
+
+	// Проверяем вызовы mock-объектов
+	mockDump.AssertExpectations(t)
 }

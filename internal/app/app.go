@@ -18,8 +18,8 @@ type App struct {
 	storageInstance  *storage.Storage           
 	servicesInstance *services.ShortenerService 
 	config           *config.Config             
-	fillFromStorage  func(*storage.Storage, string) error
-	set              func(*storage.Storage, string) error
+	FillFromStorage  func(*storage.Storage, string) error
+	Set              func(*storage.Storage, string) error
 }
 
 func NewApp(storageInstance *storage.Storage, servicesInstance *services.ShortenerService, config *config.Config) *App {
@@ -27,8 +27,8 @@ func NewApp(storageInstance *storage.Storage, servicesInstance *services.Shorten
 		storageInstance:  storageInstance,
 		servicesInstance: servicesInstance,
 		config:           config,
-		fillFromStorage:  dump.FillFromStorage,
-		set:              dump.Set,
+		FillFromStorage:  dump.FillFromStorage,
+		Set:              dump.Set,
 	}
 }
 
@@ -100,7 +100,7 @@ func (a *App) UseDatabase() bool {
 func (a *App) Stop() error {
 	fmt.Println("Сохраняем данные перед завершением работы...")
 	if a.UseDatabase() {
-		err := a.set(a.storageInstance, a.config.FilePath) // Используем a.set вместо dump.Set
+		err := a.Set(a.storageInstance, a.config.FilePath) // Используем a.Set вместо dump.Set
 		if err != nil {
 			return err
 		}
