@@ -6,7 +6,7 @@ import (
 	"net"
 
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	pb "github.com/Renal37/musthave_shortener_tpl.git/proto"
+	pb "github.com/Renal37/musthave_shortener_tpl.git/proto/shortener"
 	"google.golang.org/grpc"
 )
 
