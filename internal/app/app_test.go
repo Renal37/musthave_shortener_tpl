@@ -3,26 +3,12 @@ package app_test
 import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
 )
 
-// MockStorage реализует интерфейс storage.Storage
-// для мокирования в тестах.
-type MockStorage struct {
-	mock.Mock
-	storage.Storage // Встраивание интерфейса для удовлетворения типа
-}
-
-// MockService реализует интерфейс services.ShortenerService
-// для мокирования в тестах.
-type MockService struct {
-	mock.Mock
-	services.ShortenerService // Встраивание интерфейса для удовлетворения типа
-}
 
 // MockDump реализует мокирование функций из пакета dump
 type MockDump struct {
@@ -53,3 +39,12 @@ func TestApp_UseDatabase(t *testing.T) {
 	assert.False(t, appInstance.UseDatabase(), "UseDatabase должен возвращать false, если DBPath не пустой")
 }
 
+func TestStop(t *testing.T) {
+	mockStorage := storage.NewStorage()
+	mockConfig := &config.Config{
+		FilePath: "/tmp/test_data.json",
+	}
+
+	app := app.NewApp(mockStorage, nil, mockConfig)
+	app.Stop()
+}

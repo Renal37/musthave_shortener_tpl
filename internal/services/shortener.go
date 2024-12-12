@@ -157,4 +157,3 @@ func RandSeq() string {
 	}
 	return string(result)
 }
-
