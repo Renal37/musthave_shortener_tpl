@@ -1,17 +1,67 @@
-package api
+package rest
 
 import (
 	"encoding/json"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
+// func Test_DeleteUserUrls(t *testing.T) {
+// 	storageInstance := storage.NewStorage()
+// 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)
+
+// 	type args struct {
+// 		code        int
+// 		contentType string
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		Storage RestAPI
+// 		args    args
+// 		body    string
+// 	}{
+// 		{
+// 			name: "test1",
+// 			Storage: RestAPI{
+// 				Shortener: storageShortener,
+// 			},
+// 			args: args{
+// 				code:        http.StatusAccepted, // 202
+// 				contentType: "text/plain",
+// 			},
+// 			body: `["short123"]`, // JSON array of short URLs
+// 		},
+// 	}
+
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			r := gin.Default()
+// 			r.Use(func(c *gin.Context) {
+// 				c.Set("userID", "user123") //
+// 			})
+// 			r.DELETE("/api/user/urls", tt.Storage.DeleteUserUrls)
+// 			request := httptest.NewRequest(http.MethodDelete, "/api/user/urls", strings.NewReader(tt.body))
+// 			request.Header.Set("Content-Type", "application/json")
+
+// 			w := httptest.NewRecorder()
+// 			r.ServeHTTP(w, request)
+
+//				if w.Code != tt.args.code {
+//					t.Errorf("expected status %d, got %d", tt.args.code, w.Code)
+//				}
+//				if w.Header().Get("Content-Type") != tt.args.contentType {
+//					t.Errorf("expected content type %s, got %s", tt.args.contentType, w.Header().Get("Content-Type"))
+//				}
+//			})
+//		}
+//	}
 func Test_shortenURLHandler(t *testing.T) {
 	storageInstance := storage.NewStorage()
 	storageShortener := services.NewShortenerService("http://localhost:8080", storageInstance, nil, false)

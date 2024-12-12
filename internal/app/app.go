@@ -3,28 +3,32 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/api/grpc"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/api/rest"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/dump"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
+	"golang.org/x/sync/errgroup"
 )
 
-// App представляет собой структуру приложения, содержащую хранилище и конфигурацию.
 type App struct {
-	storageInstance *storage.Storage // Указатель на хранилище
-	config          *config.Config   // Указатель на конфигурацию
+	storageInstance  *storage.Storage           
+	servicesInstance *services.ShortenerService 
+	config           *config.Config             
+	FillFromStorage  func(*storage.Storage, string) error
+	Set              func(*storage.Storage, string) error
 }
 
-// NewApp создает новый экземпляр приложения с заданным хранилищем и конфигурацией.
-func NewApp(storageInstance *storage.Storage, config *config.Config) *App {
+func NewApp(storageInstance *storage.Storage, servicesInstance *services.ShortenerService, config *config.Config) *App {
 	return &App{
-		storageInstance: storageInstance,
-		config:          config,
+		storageInstance:  storageInstance,
+		servicesInstance: servicesInstance,
+		config:           config,
+		FillFromStorage:  dump.FillFromStorage,
+		Set:              dump.Set,
 	}
 }
 
@@ -47,12 +51,10 @@ func (a *App) Start(ctx context.Context) error {
 		dbDNSTurn = false
 	}
 
-	// Канал для завершения API
-	apiDone := make(chan error, 1)
-
+	var eg errgroup.Group
 	// Запускаем REST API с контекстом
-	go func() {
-		err := api.StartRestAPI(
+	eg.Go(func() error {
+		err := rest.StartRestAPI(
 			ctx,
 			a.config.ServerAddr,
 			a.config.BaseURL,
@@ -64,27 +66,28 @@ func (a *App) Start(ctx context.Context) error {
 			a.config.CertFile,
 			a.config.KeyFile,
 		)
-		apiDone <- err
-	}()
+		return err
+	})
 
-	// Канал для системных сигналов
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	// Запускаем gRPC сервер
+	eg.Go(func() error {
+		err := grpc.StartGRPCServer(ctx, a.servicesInstance, ":50051")
+		return err
+	})
 
-	// Обработка завершения через контекст, системные сигналы или ошибки API
-	select {
-	case <-ctx.Done():
-		fmt.Println("Контекст завершён")
-	case sig := <-signalChan:
-		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
-	case err := <-apiDone:
-		if err != nil {
-			fmt.Printf("Ошибка при запуске REST API: %v\n", err)
+	eg.Go(func() error {
+		// Ожидание завершения контекста
+		<-ctx.Done()
+		if err := a.Stop(); err != nil {
 			return err
 		}
-	}
+		return nil
+	})
 
-	a.Stop()
+	if err := eg.Wait(); err != nil {
+		fmt.Printf("Ошибка при запуске приложения: %v\n", err)
+		return err
+	}
 	return nil
 }
 
@@ -94,14 +97,14 @@ func (a *App) UseDatabase() bool {
 }
 
 // Stop останавливает приложение: сохраняет данные из хранилища в файл.
-func (a *App) Stop() {
+func (a *App) Stop() error {
 	fmt.Println("Сохраняем данные перед завершением работы...")
 	if a.UseDatabase() {
-		err := dump.Set(a.storageInstance, a.config.FilePath)
+		err := a.Set(a.storageInstance, a.config.FilePath) // Используем a.Set вместо dump.Set
 		if err != nil {
-			fmt.Printf("Ошибка при сохранении данных: %v\n", err)
-		} else {
-			fmt.Println("Данные успешно сохранены.")
+			return err
 		}
+		fmt.Println("Данные успешно сохранены.")
 	}
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +14,8 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
+
+	"google.golang.org/grpc"
 )
 
 var (
@@ -51,33 +54,48 @@ func initializeAndStartApp() {
 	dbDNSTurn := false // Установите в true, если хотите использовать базу данных для хранения
 
 	servicesInstance := services.NewShortenerService("http://localhost:8080", storageInstance, dbInstance, dbDNSTurn)
+	appInstance := app.NewApp(storageInstance, servicesInstance, addrConfig)
 
-	appInstance := app.NewApp(storageInstance, addrConfig)
-
+	// Инициализация контекста
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Запуск REST API
+	// Создание и настройка gRPC-сервера
+	grpcServer := grpc.NewServer()
+	defer grpcServer.GracefulStop()
+
+	// Регистрируем сервисы на gRPC-сервере
+	// examplepb.RegisterExampleServiceServer(grpcServer, exampleServiceInstance)
+
+	listener, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("Не удалось запустить gRPC listener: %v", err)
+	}
+
 	go func() {
-		if err := appInstance.Start(ctx); err != nil {
-			log.Fatalf("Ошибка при запуске приложения: %v", err)
+		log.Println("Запуск gRPC-сервера на порту 50051...")
+		if err := grpcServer.Serve(listener); err != nil {
+			log.Fatalf("Ошибка запуска gRPC-сервера: %v", err)
 		}
 	}()
 
-	// Запуск gRPC сервера
-	if err := app.StartGRPCServer(servicesInstance, ":50051"); err != nil {
-		log.Fatalf("Ошибка при запуске gRPC-сервера: %v", err)
+	// Обработка системных сигналов
+	go func() {
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+		<-signalChan
+		log.Println("Получен сигнал завершения, инициирован shutdown...")
+		cancel()
+	}()
+
+	// Запуск основного приложения
+	if err := appInstance.Start(ctx); err != nil {
+		log.Fatalf("Ошибка при запуске приложения: %v", err)
 	}
 
-	// Обработка корректного завершения
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-
+	// Ожидание завершения контекста
 	select {
 	case <-ctx.Done():
-		fmt.Println("Контекст завершён")
-	case sig := <-signalChan:
-		fmt.Printf("Получен сигнал: %v. Завершаем работу...\n", sig)
-		cancel()
+		log.Println("Контекст отменен, завершение работы...")
 	}
 }

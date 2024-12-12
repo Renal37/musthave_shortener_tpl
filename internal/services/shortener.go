@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"go.uber.org/zap"
+	"math/rand"
+	"time"
 )
 
 // Store определяет интерфейс взаимодействия с хранилищем URL.
@@ -87,7 +89,7 @@ func (s *ShortenerService) Get(shortID string) (string, error) {
 	return originalURL, nil
 }
 
-// Ping проверяет доступность соединения с базой данных.
+// Ping проверяет дост	упность соединения с базой данных.
 func (s *ShortenerService) Ping() error {
 	return s.db.PingStore()
 }
@@ -145,4 +147,13 @@ func (s *ShortenerService) GetUserCount() (int, error) {
 		return s.db.GetUserCount()
 	}
 	return 0, errors.New("метод не поддерживается для текущего хранилища")
+}
+func RandSeq() string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	rand.Seed(time.Now().UnixNano())
+	result := make([]byte, 10) // Example length of 10
+	for i := range result {
+		result[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(result)
 }
