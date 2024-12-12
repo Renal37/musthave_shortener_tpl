@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"go.uber.org/zap"
+	"math/rand"
+	"time"
 )
 
 // Store определяет интерфейс взаимодействия с хранилищем URL.
@@ -146,3 +148,13 @@ func (s *ShortenerService) GetUserCount() (int, error) {
 	}
 	return 0, errors.New("метод не поддерживается для текущего хранилища")
 }
+func RandSeq() string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	rand.Seed(time.Now().UnixNano())
+	result := make([]byte, 10) // Example length of 10
+	for i := range result {
+		result[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(result)
+}
+

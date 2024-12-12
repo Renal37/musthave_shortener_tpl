@@ -230,3 +230,35 @@ func TestShortenerService_GetUserCount_NoDB(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, 0, count)
 }
+
+func TestShortenerService_GetFullRep(t *testing.T) {
+	mockStore := new(MockStore)
+	service := services.NewShortenerService("http://example.com", nil, mockStore, true)
+
+	mockStore.On("GetFull", "user123", "http://example.com").Return([]map[string]string{
+		{"shortURL": "short123", "originalURL": "http://original.com"},
+	}, nil)
+
+	urls, err := service.GetFullRep("user123")
+	assert.NoError(t, err)
+	assert.Len(t, urls, 1)
+	assert.Equal(t, "short123", urls[0]["shortURL"])
+}
+
+func TestShortenerService_DeleteURLsRep(t *testing.T) {
+	mockStore := new(MockStore)
+	service := services.NewShortenerService("http://example.com", nil, mockStore, true)
+
+	mockStore.On("DeleteURLs", "user123", "short123", mock.Anything).Return(nil)
+
+	err := service.DeleteURLsRep("user123", []string{"short123"})
+	assert.NoError(t, err)
+}
+
+func TestRandSeq(t *testing.T) {
+	seq1 := services.RandSeq()
+	seq2 := services.RandSeq()
+	if seq1 == seq2 {
+		t.Errorf("Expected unique random values, but got %s and %s", seq1, seq2)
+	}
+}
