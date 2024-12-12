@@ -2,50 +2,79 @@ package main
 
 import (
 	"context"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"os"
+	"os/signal"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
+// Mock components for testing
+type MockStorage struct {
+	mock.Mock
+}
+
+type MockService struct {
+	mock.Mock
+}
+
 func TestInitializeAndStartApp(t *testing.T) {
-	// Создаем фиктивную конфигурацию и хранилище
+	// Mock configuration
 	mockConfig := &config.Config{
-		DBPath:     "",
-		FilePath:   "test_file_path",
-		ServerAddr: "localhost:8080",
-		BaseURL:    "http://localhost",
-		LogLevel:   "info",
+		ServerAddr: ":8080",
+		BaseURL:    "http://localhost:8080",
+		FilePath:   "/tmp/test_data.json",
 	}
-	mockStorage := storage.NewStorage()
+
+	// Mock storage
+	mockStorage := &storage.Storage{}
+
+	// Mock services
+	mockService := services.NewShortenerService(mockConfig.BaseURL, mockStorage, nil, false)
 
 	// Создаем экземпляр приложения
-	appInstance := app.NewApp(mockStorage, mockConfig)
+	appInstance := app.NewApp(mockStorage, mockService, mockConfig)
+
+	// Настраиваем контекст и канал для сигналов
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	// Запускаем приложение в отдельной горутине
+
+	signalChan := make(chan os.Signal, 1)
+	defer close(signalChan)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
 	go func() {
-		if err := appInstance.Start(ctx); err != nil {
-			t.Errorf("Ошибка при запуске приложения: %v", err)
-		}
+		// Эмулируем сигнал завершения через небольшую задержку
+		time.Sleep(1 * time.Second)
+		signalChan <- syscall.SIGINT
 	}()
 
-	// Даем серверу время для запуска
-	time.Sleep(2 * time.Second)
+	// Запускаем приложение в отдельной горутине
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- appInstance.Start(ctx)
+	}()
 
-	// Отправляем сигнал завершения
-	process, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		t.Fatalf("Не удалось найти процесс: %v", err)
+	// Ожидаем сигнал завершения
+	select {
+	case <-signalChan:
+		cancel()
+	case <-time.After(2 * time.Second):
+		t.Fatal("Тест завершился по таймауту при ожидании сигнала")
 	}
 
-	if err := process.Signal(syscall.SIGINT); err != nil {
-		t.Fatalf("Не удалось отправить сигнал завершения: %v", err)
+	// Проверяем, что приложение завершилось без ошибок
+	select {
+	case err := <-errChan:
+		assert.NoError(t, err, "Приложение должно завершиться без ошибок")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Тест завершился по таймауту при ожидании завершения приложения")
 	}
-
-	// Даем серверу время для завершения
-	time.Sleep(2 * time.Second)
 }

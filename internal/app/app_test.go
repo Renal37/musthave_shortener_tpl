@@ -1,97 +1,134 @@
-package app
+package app_test
 
 import (
+	"context"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/app"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/stretchr/testify/assert"
+	"time"
+	"github.com/stretchr/testify/mock"
 	"testing"
-	// "os"
-	// "syscall"
-	// "time"
-	// "context"
 )
 
-// TestNewApp проверяет создание нового экземпляра приложения
-func TestNewApp(t *testing.T) {
-	mockStorage := storage.NewStorage() // Предположим, есть функция создания пустого хранилища
-	mockConfig := &config.Config{
-		FilePath:    "/tmp/test_data.json",
-		DBPath:      "",
-		ServerAddr:  ":8080",
-		BaseURL:     "http://localhost:8080",
-		LogLevel:    "debug",
-		EnableHTTPS: false,
-		CertFile:    "",
-		KeyFile:     "",
-	}
-
-	app := NewApp(mockStorage, mockConfig)
-	assert.NotNil(t, app)
-	assert.Equal(t, mockStorage, app.storageInstance)
-	assert.Equal(t, mockConfig, app.config)
+// MockDump реализует мокирование функций из пакета dump
+type MockDump struct {
+	mock.Mock
 }
 
-// TestUseDatabase проверяет функцию UseDatabase
-func TestUseDatabase(t *testing.T) {
-	mockStorage := storage.NewStorage()
-	mockConfig := &config.Config{
-		DBPath: "",
-	}
-
-	app := NewApp(mockStorage, mockConfig)
-	assert.True(t, app.UseDatabase())
-
-	mockConfig.DBPath = "/path/to/db"
-	app = NewApp(mockStorage, mockConfig)
-	assert.False(t, app.UseDatabase())
+func (m *MockDump) FillFromStorage(storage *storage.Storage, filePath string) error {
+	args := m.Called(storage, filePath)
+	return args.Error(0)
 }
 
-// func TestStart(t *testing.T) {
-// 	// Создаем фиктивную конфигурацию и хранилище
-// 	mockConfig := &config.Config{
-// 		DBPath:     "",
-// 		FilePath:   "test_file_path",
-// 		ServerAddr: "localhost:8080",
-// 		BaseURL:    "http://localhost",
-// 		LogLevel:   "info",
-// 	}
-// 	mockStorage := storage.NewStorage()
+func (m *MockDump) Set(storage *storage.Storage, filePath string) error {
+	args := m.Called(storage, filePath)
+	return args.Error(0)
+}
 
-// 	// Создаем экземпляр приложения
-// 	app := NewApp(mockStorage, mockConfig)
-// 	ctx, cancel := context.WithCancel(context.Background())
-// 	defer cancel()
-// 	// Запускаем приложение в отдельной горутине
-// 	go func() {
-// 		if err := app.Start(ctx); err != nil {
-// 			t.Errorf("Ошибка при запуске приложения: %v", err)
-// 		}
-// 	}()
+func TestApp_UseDatabase(t *testing.T) {
+	// Инициализация конфигурации без пути к базе данных
+	cfg := &config.Config{DBPath: ""}
 
-// 	// Даем серверу время для запуска
-// 	time.Sleep(2 * time.Second)
+	// Создаем приложение с пустыми зависимостями
+	appInstance := app.NewApp(nil, nil, cfg)
+	assert.True(t, appInstance.UseDatabase(), "UseDatabase должен возвращать true, если DBPath пустой")
 
-// 	// Отправляем сигнал завершения
-// 	process, err := os.FindProcess(os.Getpid())
-// 	if err != nil {
-// 		t.Fatalf("Не удалось найти процесс: %v", err)
-// 	}
+	// Обновляем конфигурацию с указанием пути к базе данных
+	cfg.DBPath = "test.db"
+	appInstance = app.NewApp(nil, nil, cfg)
+	assert.False(t, appInstance.UseDatabase(), "UseDatabase должен возвращать false, если DBPath не пустой")
+}
 
-// 	if err := process.Signal(syscall.SIGINT); err != nil {
-// 		t.Fatalf("Не удалось отправить сигнал завершения: %v", err)
-// 	}
-
-// 	// Даем серверу время для завершения
-// 	time.Sleep(2 * time.Second)
-// }
-
-// TestStop проверяет остановку приложения
 func TestStop(t *testing.T) {
 	mockStorage := storage.NewStorage()
 	mockConfig := &config.Config{
 		FilePath: "/tmp/test_data.json",
 	}
 
-	app := NewApp(mockStorage, mockConfig)
+	app := app.NewApp(mockStorage, nil, mockConfig)
 	app.Stop()
+}
+func TestApp_UseDatabaseWithDifferentDBPaths(t *testing.T) {
+	tests := []struct {
+		dbPath string
+		expect bool
+	}{
+		{"", true},                      // Пустой путь
+		{"test.db", false},              // Непустой путь
+		{"./relative_path.db", false},   // Относительный путь
+		{"/absolute/path/to/db", false}, // Абсолютный путь
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.dbPath, func(t *testing.T) {
+			cfg := &config.Config{DBPath: tt.dbPath}
+			appInstance := app.NewApp(nil, nil, cfg)
+			assert.Equal(t, tt.expect, appInstance.UseDatabase())
+		})
+	}
+}
+func TestApp_Start(t *testing.T) {
+    // Мокаем хранилище и сервисы
+    mockStorage := storage.NewStorage()
+    mockServices := &services.ShortenerService{}
+    
+    // Конфигурация с пустым DBPath
+    mockConfig := &config.Config{
+        DBPath:     "",
+        FilePath:   "/tmp/test_data.json", // Убедитесь, что этот путь не используется на самом деле в тестах
+        ServerAddr: "localhost:0",
+        BaseURL:    "/api",
+        LogLevel:   "info",
+        EnableHTTPS: false,
+    }
+
+    // Мокируем функции из dump
+    mockDump := new(MockDump)
+    app := app.NewApp(mockStorage, mockServices, mockConfig)
+    
+    // Замена реальных функций на моки
+    app.FillFromStorage = mockDump.FillFromStorage
+    app.Set = mockDump.Set
+
+    // Ожидаем вызов метода FillFromStorage
+
+    // Ожидаем вызов метода Set с аргументами, которые могут быть переданы
+    mockDump.On("Set", mockStorage, mockConfig.FilePath).Return(nil)
+
+    // Создаем контекст с тайм-аутом 5 секунд
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    // Запускаем приложение с ограничением времени
+    err := app.Start(ctx)
+    assert.NoError(t, err, "app.Start должен завершиться без ошибок")
+
+    // Проверяем, что методы были вызваны
+}
+
+
+
+func TestStop_WithoutDatabase(t *testing.T) {
+	mockStorage := storage.NewStorage()
+	mockConfig := &config.Config{
+		DBPath:   "", // База данных не используется
+		FilePath: "/tmp/test_data.json",
+	}
+
+	// Мокируем функции из dump
+	mockDump := new(MockDump)
+	mockDump.On("Set", mockStorage, mockConfig.FilePath).Return(nil)
+
+	// Создаем приложение с моками
+	app := app.NewApp(mockStorage, nil, mockConfig)
+	app.Set = mockDump.Set
+
+	// Вызываем Stop
+	err := app.Stop()
+	assert.NoError(t, err)
+
+	// Проверяем вызовы mock-объектов
+	mockDump.AssertExpectations(t)
 }

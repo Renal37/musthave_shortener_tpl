@@ -1,4 +1,4 @@
-package api_test
+package rest_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/api"
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/api/rest"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/storage"
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
@@ -25,7 +25,7 @@ func TestStartRestAPI(t *testing.T) {
 
 	// Запускаем сервер в отдельной горутине
 	go func() {
-		err := api.StartRestAPI(ctx, ":8080", "http://localhost:8080", "info", db, false, storageInstance, false, "", "")
+		err := rest.StartRestAPI(ctx, ":8080", "http://localhost:8080", "info", db, false, storageInstance, false, "", "")
 		assert.NoError(t, err)
 	}()
 
@@ -61,7 +61,7 @@ func TestStartRestAPIWithHTTPS(t *testing.T) {
 
 	// Запускаем сервер с HTTPS в отдельной горутине
 	go func() {
-		err := api.StartRestAPI(ctx, ":8443", "https://localhost:8443", "info", db, false, storageInstance, true, "cert.pem", "key.pem")
+		err := rest.StartRestAPI(ctx, ":8443", "https://localhost:8443", "info", db, false, storageInstance, true, "../cert.pem", "../key.pem")
 		assert.NoError(t, err)
 	}()
 

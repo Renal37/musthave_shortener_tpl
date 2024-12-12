@@ -1,14 +1,15 @@
-package api
+package rest
 
 import (
 	"encoding/json"
 	"errors"
-	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/Renal37/musthave_shortener_tpl.git/internal/config"
+	"github.com/gin-gonic/gin"
 )
 
 // Request представляет структуру для обработки запроса на сокращение URL

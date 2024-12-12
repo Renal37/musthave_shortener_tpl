@@ -1,8 +1,14 @@
-package api
+package rest
 
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/logger"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/middleware"
 	"github.com/Renal37/musthave_shortener_tpl.git/internal/services"
@@ -10,11 +16,6 @@ import (
 	"github.com/Renal37/musthave_shortener_tpl.git/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 )
 
 // RestAPI представляет собой структуру для REST API.
